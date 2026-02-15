@@ -55,7 +55,9 @@ Widget buildCategoryGrid(BuildContext context) {
       itemBuilder: (context, index) {
         final cat = categories[index];
         return InkWell(
-          onTap: () {},
+          onTap: () {
+            Navigator.pushNamed(context, cat['route'] as String);
+          },
           child: Card(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

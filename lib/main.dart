@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/views/screens/quran_screen.dart';
+import 'package:sapeel/views/screens/surah_detail.dart';
 import 'package:sapeel/views/small_widget/Verse_of_the_day.dart';
 import 'package:sapeel/views/small_widget/build_header.dart';
 import 'package:sapeel/views/small_widget/category_grid.dart';
@@ -17,14 +18,15 @@ class QuranApp extends StatelessWidget {
       routes: {'/al_quran': (context) => const QuranScreen()},
 
       // initialRoute: '/al_quran',
-      // onGenerateRoute: (settings) {
-      //   if (settings.name == '/al_quran') {
-      //     return MaterialPageRoute(
-      //       builder: (context) => const QuranScreen(),
-      //     );
-      //   }
-      //   return null;
-      // },
+      onGenerateRoute: (settings) {
+        if (settings.name == '/surah_detail') {
+          final surahNumber = settings.arguments as int;
+          return MaterialPageRoute(
+            builder: (context) => SurahDetailScreen(surahNumber: surahNumber),
+          );
+        }
+        return null;
+      },
       title: 'Sapeel - Quran & Islamic Sciences',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(

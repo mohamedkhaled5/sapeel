@@ -1,10 +1,10 @@
-class Surah {
+class SurahData {
   final int number;
   final String nameAr;
   final String nameEn;
   final String nameTr;
   final String revelationPlace;
-  Surah({
+  SurahData({
     required this.number,
     required this.nameAr,
     required this.nameEn,
@@ -12,8 +12,8 @@ class Surah {
     required this.revelationPlace,
   });
 
-  factory Surah.fromJson(Map<String, dynamic> json) {
-    return Surah(
+  factory SurahData.fromJson(Map<String, dynamic> json) {
+    return SurahData(
       number: json["number"],
       nameAr: json["name"]["ar"],
       nameEn: json["name"]["en"],

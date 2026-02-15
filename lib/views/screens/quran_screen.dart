@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/data/quran_api.dart';
-import 'package:sapeel/model/surah_model.dart';
+import 'package:sapeel/model/surah_data_model.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:sapeel/views/screens/surah_detail.dart';
 
 class QuranScreen extends StatefulWidget {
   const QuranScreen({super.key});
@@ -11,7 +12,7 @@ class QuranScreen extends StatefulWidget {
 }
 
 class _QuranScreenState extends State<QuranScreen> {
-  late Future<List<Surah>> surahs;
+  late Future<List<SurahData>> surahs;
 
   @override
   void initState() {
@@ -19,16 +20,16 @@ class _QuranScreenState extends State<QuranScreen> {
     surahs = fetchSurahs();
   }
 
-  Future<List<Surah>> fetchSurahs() async {
+  Future<List<SurahData>> fetchSurahs() async {
     final data = await QuranService.getSurahs();
-    return data.map<Surah>((json) => Surah.fromJson(json)).toList();
+    return data.map<SurahData>((json) => SurahData.fromJson(json)).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Al Quran")),
-      body: FutureBuilder<List<Surah>>(
+      body: FutureBuilder<List<SurahData>>(
         future: surahs,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -47,7 +48,16 @@ class _QuranScreenState extends State<QuranScreen> {
               final surah = surahList[index];
 
               return ListTile(
-                leading: CircleAvatar(child: Text(surah.number.toString())),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          SurahDetailScreen(surahNumber: surah.number),
+                    ),
+                  );
+                },
+
                 title: Text(surah.nameAr, textDirection: TextDirection.rtl),
                 subtitle: Row(
                   children: [
@@ -71,7 +81,8 @@ class _QuranScreenState extends State<QuranScreen> {
                   ],
                 ),
 
-                trailing: Text(surah.revelationPlace),
+                trailing: CircleAvatar(child: Text(surah.number.toString())),
+                // leading: CircleAvatar(child: Text(surah.number.toString())),
               );
             },
           );

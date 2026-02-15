@@ -41,24 +41,61 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
 
           final surah = snapshot.data!;
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: surah.ayahs.length,
-            itemBuilder: (context, index) {
-              final ayah = surah.ayahs[index] as Map<String, dynamic>;
-              final text =
-                  (ayah["text"] as Map<String, dynamic>)["ar"] as String;
-              final ayahNumberInSurah = index + 1;
+          final fullSurahText = surah.ayahs
+              .asMap()
+              .entries
+              .map((entry) {
+                final index = entry.key;
+                final ayah = entry.value as Map<String, dynamic>;
+                final text =
+                    (ayah["text"] as Map<String, dynamic>)["ar"] as String;
 
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Text(
-                  "﴾$text﴿ $ayahNumberInSurah",
-                  textAlign: TextAlign.right,
-                  style: const TextStyle(fontSize: 20, height: 1.8),
-                ),
-              );
-            },
+                return "$text ﴿${index + 1}﴾";
+              })
+              .join(" ");
+
+          return Container(
+            color: const Color(0xFFF8F5EC), // لون ورق مصحف خفيف
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                children: [
+                  // اسم السورة
+                  Text(
+                    surah.nameAr,
+                    style: const TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      fontFamily: "Amiri",
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // البسملة (مش بتظهر في التوبة)
+                  if (surah.number != 9)
+                    const Text(
+                      "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                      style: TextStyle(fontSize: 24, fontFamily: "Amiri"),
+                      textAlign: TextAlign.center,
+                    ),
+
+                  const SizedBox(height: 24),
+
+                  // نص السورة
+                  Text(
+                    fullSurahText,
+                    textAlign: TextAlign.right,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      height: 2.2,
+                      fontFamily: "Amiri",
+                    ),
+                  ),
+                ],
+              ),
+            ),
           );
         },
       ),

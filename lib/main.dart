@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:sapeel/views/screens/mushaf_screen.dart';
 import 'package:sapeel/views/screens/quran_screen.dart';
 import 'package:sapeel/views/screens/surah_detail.dart';
 import 'package:sapeel/views/small_widget/Verse_of_the_day.dart';

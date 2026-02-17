@@ -5,7 +5,19 @@ import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive_io.dart';
 
 class MushafScreen extends StatefulWidget {
-  const MushafScreen({super.key});
+  final int initialPage;
+  //================//
+  final int initialJuz;
+  final List<dynamic>? verses;
+
+  //================//
+
+  const MushafScreen({
+    super.key,
+    required this.initialPage,
+    this.initialJuz = 1,
+    this.verses,
+  });
 
   @override
   State<MushafScreen> createState() => _MushafScreenState();
@@ -16,13 +28,41 @@ class _MushafScreenState extends State<MushafScreen> {
   bool isDownloading = false;
   double progress = 0;
   String? mushafPath;
+  late PageController _pageController;
+  //====================//
+  late int currentPage;
+  late int currentJuz;
+  Map<int, int> pageToJuz = {};
+
+  //====================//
 
   static const zipUrl = "https://api.quranpedia.net/api-quran-png/hafs.zip";
 
   @override
   void initState() {
     super.initState();
+    //================//
+    currentPage = widget.initialPage;
+    preparePageJuzData();
+    currentJuz = pageToJuz[currentPage] ?? widget.initialJuz;
+
+    //=====================//
+
+    _pageController = PageController(initialPage: widget.initialPage - 1);
     checkIfDownloaded();
+  }
+
+  void preparePageJuzData() {
+    if (widget.verses == null) return;
+
+    for (var verse in widget.verses!) {
+      int page = verse["page"];
+      int juz = verse["juz"];
+
+      if (!pageToJuz.containsKey(page)) {
+        pageToJuz[page] = juz;
+      }
+    }
   }
 
   Future<void> checkIfDownloaded() async {
@@ -120,21 +160,48 @@ class _MushafScreenState extends State<MushafScreen> {
         ),
       );
     }
-
     // عرض المصحف
     return Scaffold(
-      appBar: AppBar(title: const Text("مصحف المدينة")),
-      body: PageView.builder(
-        itemCount: 604,
-        itemBuilder: (context, index) {
-          final pageNumber = (index + 1).toString().padLeft(3, '0');
+      //==================//
+      appBar: AppBar(
+        centerTitle: true,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("مصحف المدينة", style: TextStyle(fontSize: 16)),
+            Text(
+              "صفحة $currentPage | جزء $currentJuz",
+              style: const TextStyle(fontSize: 13),
+            ),
+          ],
+        ),
+      ),
+      //=========================================//
+      body: Directionality(
+        textDirection: TextDirection.rtl,
+        child: PageView.builder(
+          controller: _pageController,
+          reverse:
+              false, // make the direction of the page view from right to left
+          itemCount: 604,
+          //=================//
+          onPageChanged: (index) {
+            final newPage = index + 1;
+            setState(() {
+              currentPage = newPage;
+              currentJuz = pageToJuz[newPage] ?? currentJuz;
+            });
+          },
+          //==================//
+          itemBuilder: (context, index) {
+            final pageNumber = (index + 1).toString().padLeft(3, '0');
+            final filePath = "$mushafPath/$pageNumber.png";
 
-          final filePath = "$mushafPath/$pageNumber.png";
-
-          return InteractiveViewer(
-            child: Image.file(File(filePath), fit: BoxFit.contain),
-          );
-        },
+            return InteractiveViewer(
+              child: Image.file(File(filePath), fit: BoxFit.contain),
+            );
+          },
+        ),
       ),
     );
   }

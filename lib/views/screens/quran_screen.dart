@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/data/quran_api.dart';
 import 'package:sapeel/model/surah_data_model.dart';
+// ignore: depend_on_referenced_packages
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:sapeel/views/screens/surah_detail.dart';
 
@@ -52,9 +53,8 @@ class _QuranScreenState extends State<QuranScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => SurahDetailScreen(
-                        surahNumber: surah.number,
-                      ), // change this from surahdetailscreen to mushafscreen
+                      builder: (_) =>
+                          SurahDetailScreen(surahNumber: surah.number),
                     ),
                   );
                 },

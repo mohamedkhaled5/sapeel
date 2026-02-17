@@ -62,6 +62,6 @@ class _MushafPageState extends State<MushafPage> {
       );
     }
 
-    return MushafScreen(); // هنا تعرض الصفحات
+    return MushafScreen(initialPage: 1); // هنا تعرض الصفحات
   }
 }

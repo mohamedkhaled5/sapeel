@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/data/quran_api.dart';
 import 'package:sapeel/model/surah_detail_model.dart';
+import 'package:sapeel/views/screens/mushaf_screen.dart';
 
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;
@@ -23,7 +24,20 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Surah Details")),
+      appBar: AppBar(
+        title: const Text("Surah Details"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.menu_book),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const MushafScreen()),
+              );
+            },
+          ),
+        ],
+      ),
       body: FutureBuilder<SurahDetail>(
         future: surahFuture,
         builder: (context, snapshot) {

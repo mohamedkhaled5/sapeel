@@ -3,19 +3,19 @@ import 'package:flutter/material.dart';
 Widget buildCategoryGrid(BuildContext context) {
   final categories = [
     {
-      'title': 'Al-Quran',
+      'title': 'القرآن الكريم',
       'icon': Icons.menu_book,
       'color': Colors.green,
       'route': '/al_quran',
     },
     {
-      'title': 'Hadith',
+      'title': 'الحديث',
       'icon': Icons.history_edu,
       'color': Colors.amber,
       'route': '/hadith',
     },
     {
-      'title': 'Prayer Times',
+      'title': 'مواقيت الصلاة',
       'icon': Icons.access_time,
       'color': Colors.blue,
       'route': '/prayer_times',
@@ -27,13 +27,13 @@ Widget buildCategoryGrid(BuildContext context) {
       'route': '/dua',
     },
     {
-      'title': 'Qibla',
+      'title': 'القبلة',
       'icon': Icons.explore,
       'color': Colors.red,
       'route': '/qibla',
     },
     {
-      'title': 'Islamic Library',
+      'title': 'دار العلم',
       'icon': Icons.library_books,
       'color': Colors.teal,
       'route': '/islamic_library',

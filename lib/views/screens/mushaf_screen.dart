@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:archive/archive_io.dart';
+import 'package:sapeel/data/quran_api.dart';
 
 class MushafScreen extends StatefulWidget {
   final int initialPage;

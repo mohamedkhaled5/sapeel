@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
-
+import 'package:sapeel/views/home/home_screen.dart';
+import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/el_hsoon.dart';
 import 'package:sapeel/views/hosoon_khamsa/start_setup.dart';
+import 'package:sapeel/views/quran_kareem/quran_screen.dart';
 import 'package:sapeel/views/quran_kareem/surah_detail.dart';
-import 'package:sapeel/views/small_widget/Verse_of_the_day.dart';
-import 'package:sapeel/views/small_widget/build_header.dart';
-import 'package:sapeel/views/small_widget/category_grid.dart';
 
 void main() async {
+  // التأكد من تهيئة بيئة Flutter قبل أي عمليات أخرى
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Hive.initFlutter(); // ✅ تهيئة Hive
+  // تهيئة قاعدة البيانات المحلية Hive
+  await Hive.initFlutter();
 
   runApp(const QuranApp());
 }
@@ -26,6 +26,7 @@ class QuranApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Sapeel - Quran & Islamic Sciences',
 
+      // إدارة التنقل بين الصفحات باستخدام onGenerateRoute
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/surah_detail':
@@ -33,6 +34,9 @@ class QuranApp extends StatelessWidget {
             return MaterialPageRoute(
               builder: (_) => SurahDetailScreen(surahNumber: surahNumber),
             );
+
+          case '/al_quran':
+            return MaterialPageRoute(builder: (_) => const QuranScreen());
 
           case '/dua':
             return MaterialPageRoute(builder: (_) => const QuranFollowUpFlow());
@@ -47,70 +51,15 @@ class QuranApp extends StatelessWidget {
 
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B5E20)),
-      ),
-
-      home: const RootDecider(), // 👈 أهم نقطة
-    );
-  }
-}
-
-////////////////////////////////////////////////////////////
-
-class RootDecider extends StatefulWidget {
-  const RootDecider({super.key});
-
-  @override
-  State<RootDecider> createState() => _RootDeciderState();
-}
-
-class _RootDeciderState extends State<RootDecider> {
-  int? startPage;
-
-  @override
-  void initState() {
-    super.initState();
-    check();
-  }
-
-  void check() async {
-    startPage = await AppStorage.getStartPage();
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (startPage == null) {
-      return const StartSetupScreen(); // 👈 أول مرة
-    }
-
-    return const HomeScreen(); // 👈 لو متسجل
-  }
-}
-
-////////////////////////////////////////////////////////////
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Sapeel',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(
+            0xFF1B5E20,
+          ), // اللون الأخضر العميق للهوية الإسلامية
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            buildHeader(context),
-            buildCategoryGrid(context),
-            buildVerseOfTheDay(context),
-          ],
-        ),
-      ),
+
+      // الويدجت التي تقرر الشاشة الأولى بناءً على حالة المستخدم
+      home: const RootDecider(),
     );
   }
 }

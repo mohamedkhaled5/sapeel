@@ -9,8 +9,13 @@ class MushafService {
       "https://api.quranpedia.net/api-quran-png/hafs.zip";
 
   static Future<bool> isDownloaded() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool("mushaf_downloaded") ?? false;
+    final dir = await getApplicationDocumentsDirectory();
+    return Directory("${dir.path}/mushaf").exists();
+  }
+
+  static Future<String> getMushafPath() async {
+    final dir = await getApplicationDocumentsDirectory();
+    return "${dir.path}/mushaf";
   }
 
   static Future<void> downloadMushaf(

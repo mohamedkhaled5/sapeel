@@ -10,15 +10,27 @@ class StartSetupScreen extends StatefulWidget {
 
 class _StartSetupScreenState extends State<StartSetupScreen> {
   final controller = TextEditingController();
+  int selectedFarSize = 40;
+  bool weeklyBreakEnabled = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppStorage.saveLastRoute('/setup');
+  }
 
   void start() async {
     final page = int.tryParse(controller.text);
     if (page == null) return;
 
     await AppStorage.saveStartPage(page);
+    await AppStorage.saveFarBlockSize(selectedFarSize);
+    await AppStorage.saveWeeklyBreakEnabled(weeklyBreakEnabled); // 👈 أضف ده
     await AppStorage.saveDay(1);
 
-    Navigator.pushReplacementNamed(context, "/dashboard");
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, "/dua");
+    }
   }
 
   @override
@@ -37,6 +49,36 @@ class _StartSetupScreenState extends State<StartSetupScreen> {
               decoration: const InputDecoration(border: OutlineInputBorder()),
             ),
             const SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("مراجعة البعيد أسبوعيًا: "),
+                const SizedBox(width: 10),
+                DropdownButton<int>(
+                  value: selectedFarSize,
+                  items: const [
+                    DropdownMenuItem(value: 40, child: Text("40 صفحة")),
+                    DropdownMenuItem(value: 20, child: Text("20 صفحة")),
+                  ],
+                  onChanged: (value) {
+                    setState(() {
+                      selectedFarSize = value!;
+                    });
+                  },
+                ),
+              ],
+            ),
+            SwitchListTile(
+              title: const Text(
+                "إيقاف مراجعة البعيد لباقي الأسبوع بعد الانتهاء",
+              ),
+              value: weeklyBreakEnabled,
+              onChanged: (val) {
+                setState(() {
+                  weeklyBreakEnabled = val;
+                });
+              },
+            ),
             ElevatedButton(onPressed: start, child: const Text("ابدأ")),
           ],
         ),

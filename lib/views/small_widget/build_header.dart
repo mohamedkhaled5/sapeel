@@ -15,11 +15,11 @@ Widget buildHeader(BuildContext context) {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Assalamu Alaikum,',
+          'السلام عليكم ورحمة الله وبركاته',
           style: TextStyle(color: Colors.white70, fontSize: 16),
         ),
         const Text(
-          'Welcome to Sapeel',
+          'أهلاً بك في سبيل',
           style: TextStyle(
             color: Colors.white,
             fontSize: 24,

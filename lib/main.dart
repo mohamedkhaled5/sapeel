@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:sapeel/views/home/home_screen.dart';
 import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/el_hsoon.dart';
 import 'package:sapeel/views/hosoon_khamsa/start_setup.dart';
 import 'package:sapeel/views/quran_kareem/quran_screen.dart';
 import 'package:sapeel/views/quran_kareem/surah_detail.dart';
+import 'package:sapeel/views/qibla/qibla_screen.dart';
+import 'package:sapeel/views/prayer/prayer_screen.dart';
+import 'package:sapeel/data/adhan_notification_service.dart';
 
 void main() async {
   // التأكد من تهيئة بيئة Flutter قبل أي عمليات أخرى
@@ -13,6 +17,12 @@ void main() async {
 
   // تهيئة قاعدة البيانات المحلية Hive
   await Hive.initFlutter();
+
+  // تهيئة بيانات التنسيق المحلي للغة العربية
+  await initializeDateFormatting('ar', null);
+
+  // تهيئة خدمة التنبيهات
+  await AdhanNotificationService.initialize();
 
   runApp(const QuranApp());
 }
@@ -41,8 +51,14 @@ class QuranApp extends StatelessWidget {
           case '/dua':
             return MaterialPageRoute(builder: (_) => const QuranFollowUpFlow());
 
+          case '/prayer_times':
+            return MaterialPageRoute(builder: (_) => const PrayerScreen());
+
           case '/setup':
             return MaterialPageRoute(builder: (_) => const StartSetupScreen());
+
+          case '/qibla':
+            return MaterialPageRoute(builder: (_) => const QiblaScreen());
 
           default:
             return MaterialPageRoute(builder: (_) => const HomeScreen());

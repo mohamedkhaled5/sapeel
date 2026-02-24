@@ -45,5 +45,9 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>نحتاج للوصول إلى موقعك لتحديد اتجاه القبلة بدقة.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>نحتاج للوصول إلى موقعك لتحديد اتجاه القبلة بدقة.</string>
 </dict>
 </plist>

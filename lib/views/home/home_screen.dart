@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:sapeel/views/small_widget/verse_of_the_day.dart';
 import 'package:sapeel/views/small_widget/build_header.dart';
 import 'package:sapeel/views/small_widget/category_grid.dart';
+import 'package:sapeel/views/small_widget/prayer_mini_widget.dart';
 
 import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 
@@ -24,9 +25,15 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: Color(0xFF1B5E20),
+
         title: const Text(
           'Sapeel',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+            color: Colors.white,
+          ),
         ),
       ),
       body: SingleChildScrollView(
@@ -34,6 +41,8 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // الهيدر الترحيبي
             buildHeader(context),
+            // ويدجت الصلاة القادمة
+            const PrayerMiniWidget(),
             // شبكة التصنيفات (قرآن، حديث، إلخ)
             buildCategoryGrid(context),
             // آية اليوم

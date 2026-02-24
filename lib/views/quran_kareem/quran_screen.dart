@@ -3,7 +3,7 @@ import 'package:sapeel/data/quran_api.dart';
 import 'package:sapeel/model/surah_data_model.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:sapeel/views/screens/surah_detail.dart';
+import 'package:sapeel/views/quran_kareem/surah_detail.dart';
 
 class QuranScreen extends StatefulWidget {
   const QuranScreen({super.key});

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/data/mushaf_service.dart';
-import 'package:sapeel/views/screens/mushaf_screen.dart';
+import 'package:sapeel/views/quran_kareem/mushaf_screen.dart';
 
 class MushafPage extends StatefulWidget {
   @override

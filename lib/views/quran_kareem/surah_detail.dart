@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/data/quran_api.dart';
 import 'package:sapeel/model/surah_detail_model.dart';
-import 'package:sapeel/views/screens/mushaf_screen.dart';
+import 'package:sapeel/views/quran_kareem/mushaf_screen.dart';
 
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;

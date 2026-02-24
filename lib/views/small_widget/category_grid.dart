@@ -21,8 +21,8 @@ Widget buildCategoryGrid(BuildContext context) {
       'route': '/prayer_times',
     },
     {
-      'title': 'Dua',
-      'icon': Icons.volunteer_activism,
+      'title': 'الحصون الخمسه',
+      'icon': Icons.five_g,
       'color': Colors.orange,
       'route': '/dua',
     },

@@ -3,6 +3,7 @@ import 'package:adhan/adhan.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:sapeel/data/prayer_service.dart';
+import 'package:sapeel/data/adhan_notification_service.dart';
 
 class PrayerMiniWidget extends StatefulWidget {
   const PrayerMiniWidget({super.key});
@@ -45,6 +46,8 @@ class _PrayerMiniWidgetState extends State<PrayerMiniWidget> {
           // تحديث العد التنازلي فوراً عند تحميل الأوقات
           _countdown = PrayerService.getCountdown(times);
         });
+        // تحديث الإشعارات والعداد التلقائي في شريط الإشعارات
+        AdhanNotificationService.schedulePrayerNotifications(times);
       }
     } catch (_) {}
   }

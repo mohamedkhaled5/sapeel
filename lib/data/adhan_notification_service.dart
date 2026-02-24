@@ -51,7 +51,7 @@ class AdhanNotificationService {
       await _plugin.cancelAll();
     } catch (e) {
       print("Notification cancelAll error: $e");
-      return; // توقف إذا كان هناك خطأ في الاتصال بالمكتبة
+      return;
     }
 
     final prayers = {
@@ -62,11 +62,11 @@ class AdhanNotificationService {
       "العشاء": prayerTimes.isha,
     };
 
-    int id = 0;
-    prayers.forEach((name, time) async {
-      if (time == null) return; // حماية من القيم الفارغة
+    // 1. إضافة إشعار "مستمر" للعد التنازلي للصلاة القادمة (أندرويد فقط)
+    await _showOngoingCountdown(prayerTimes);
 
-      // تنبيه وقت الأذان
+    int id = 100; // نبدأ من 100 لتجنب التداخل مع إشعار العد التنازلي (id: 0)
+    prayers.forEach((name, time) async {
       if (time.isAfter(DateTime.now())) {
         try {
           await _scheduleNotification(
@@ -76,7 +76,6 @@ class AdhanNotificationService {
             time,
           );
 
-          // تنبيه قبل الأذان بـ 15 دقيقة (اختياري)
           final preTime = time.subtract(const Duration(minutes: 15));
           if (preTime.isAfter(DateTime.now())) {
             await _scheduleNotification(
@@ -91,6 +90,58 @@ class AdhanNotificationService {
         }
       }
     });
+  }
+
+  /// عرض إشعار مستمر يحتوي على عداد تنازلي للصلاة القادمة
+  static Future<void> _showOngoingCountdown(PrayerTimes prayerTimes) async {
+    final nextPrayer = prayerTimes.nextPrayer();
+    final nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+
+    if (nextPrayerTime == null) return;
+
+    final String prayerName = _getPrayerNameArabic(nextPrayer);
+
+    await _plugin.show(
+      0, // ID ثابت لإشعار العد التنازلي
+      "الصلاة القادمة: $prayerName",
+      "بقي على الأذان:",
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          'countdown_channel_v2', // تغيير اسم القناة لضمان تحديث الإعدادات
+          'العد التنازلي للصلاة',
+          channelDescription: 'إشعار مستمر يظهر الوقت المتبقي للصلاة القادمة',
+          importance: Importance.max, // رفع الأهمية لضمان الظهور
+          priority: Priority.high,
+          ongoing: true,
+          showWhen: true,
+          when: nextPrayerTime.millisecondsSinceEpoch,
+          usesChronometer: true,
+          chronometerCountDown: true,
+          icon: '@mipmap/ic_launcher',
+          visibility:
+              NotificationVisibility.public, // السماح بالظهور في شاشة القفل
+        ),
+      ),
+    );
+  }
+
+  static String _getPrayerNameArabic(Prayer prayer) {
+    switch (prayer) {
+      case Prayer.fajr:
+        return "الفجر";
+      case Prayer.sunrise:
+        return "الشروق";
+      case Prayer.dhuhr:
+        return "الظهر";
+      case Prayer.asr:
+        return "العصر";
+      case Prayer.maghrib:
+        return "المغرب";
+      case Prayer.isha:
+        return "العشاء";
+      default:
+        return "القيام";
+    }
   }
 
   static Future<void> _scheduleNotification(

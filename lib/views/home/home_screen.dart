@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/views/small_widget/verse_of_the_day.dart';
-import 'package:sapeel/views/small_widget/build_header.dart';
+import 'package:sapeel/views/small_widget/dynamic_header.dart';
 import 'package:sapeel/views/small_widget/category_grid.dart';
 import 'package:sapeel/views/small_widget/prayer_mini_widget.dart';
 
@@ -39,8 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // الهيدر الترحيبي
-            buildHeader(context),
+            // الهيدر الترحيبي الديناميكي
+            const DynamicHeader(),
             // ويدجت الصلاة القادمة
             const PrayerMiniWidget(),
             // شبكة التصنيفات (قرآن، حديث، إلخ)

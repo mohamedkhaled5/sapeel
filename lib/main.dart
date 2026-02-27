@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:sapeel/views/islamic_library/islamic_library_screen.dart';
+import 'package:sapeel/views/hadeth/hadeth_screen.dart';
 import 'package:sapeel/views/home/home_screen.dart';
 import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/el_hsoon.dart';
@@ -36,6 +39,17 @@ class QuranApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Sapeel - Quran & Islamic Sciences',
 
+      // إعدادات اللغة والتوطين
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [
+        Locale('ar', 'SA'), // العربية
+        Locale('en', 'US'), // الإنجليزية
+      ],
+      locale: const Locale('ar', 'SA'), // اللغة الافتراضية
       // إدارة التنقل بين الصفحات باستخدام onGenerateRoute
       onGenerateRoute: (settings) {
         switch (settings.name) {
@@ -59,6 +73,14 @@ class QuranApp extends StatelessWidget {
 
           case '/qibla':
             return MaterialPageRoute(builder: (_) => const QiblaScreen());
+
+          case '/hadeth':
+            return MaterialPageRoute(builder: (_) => const HadeethScreen());
+
+          case '/islamic_library':
+            return MaterialPageRoute(
+              builder: (_) => const IslamicLibraryScreen(),
+            );
 
           default:
             return MaterialPageRoute(builder: (_) => const HomeScreen());

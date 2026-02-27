@@ -3,6 +3,7 @@ import 'package:sapeel/views/home/home_screen.dart';
 import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 import 'package:sapeel/views/hosoon_khamsa/memorization_engine.dart';
+import 'package:intl/intl.dart';
 
 /// شاشة متابعة "الحصون الخمسة" للمراجعة والحفظ اليومي
 class QuranFollowUpFlow extends StatefulWidget {
@@ -23,20 +24,52 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   @override
   void initState() {
     super.initState();
-    AppStorage.saveLastRoute('/dua');
+    _initAsync();
+  }
+
+  void _initAsync() async {
+    await AppStorage.saveLastRoute('/dua');
     _loadProgress();
   }
 
   /// تحميل التقدم المحفوظ من التخزين المحلي
   void _loadProgress() async {
-    final savedStartPage = await AppStorage.getStartPage();
-    if (savedStartPage != null) {
-      startPage = savedStartPage;
-      currentDay = await AppStorage.getDay();
-      farBlockSize = await AppStorage.getFarBlockSize();
-      weeklyBreakEnabled = await AppStorage.getWeeklyBreakEnabled();
-      dailyStatus = await AppStorage.getDailyStatus(currentDay);
-      if (mounted) setState(() {});
+    try {
+      final savedStartPage = await AppStorage.getStartPage();
+      if (savedStartPage != null) {
+        startPage = savedStartPage;
+        final startDate = await AppStorage.getStartDate();
+        if (startDate != null) {
+          // حساب اليوم الحالي بناءً على تاريخ البدء
+          final now = DateTime.now();
+          final difference = now.difference(startDate).inDays;
+          currentDay = difference + 1;
+          if (currentDay < 1) currentDay = 1;
+          if (currentDay > 604) currentDay = 604;
+          // حفظ اليوم المحسوب
+          await AppStorage.saveDay(currentDay);
+        } else {
+          currentDay = await AppStorage.getDay();
+        }
+        farBlockSize = await AppStorage.getFarBlockSize();
+        weeklyBreakEnabled = await AppStorage.getWeeklyBreakEnabled();
+        dailyStatus = await AppStorage.getDailyStatus(currentDay);
+        if (mounted) setState(() {});
+      } else {
+        // إذا لم يتم العثور على صفحة بداية، فهذا يعني أن البرنامج لم يتم ضبطه بعد
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/setup');
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading progress: $e");
+      // في حالة حدوث خطأ، نعود للشاشة الرئيسية لتجنب التعليق
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("حدث خطأ أثناء تحميل البيانات")),
+        );
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -422,9 +455,15 @@ class HsoonStatsPage extends StatelessWidget {
 
 // --- صفحة فهرس الأيام (Days Index Page) ---
 
-class HsoonDaysIndexPage extends StatelessWidget {
+class HsoonDaysIndexPage extends StatefulWidget {
   const HsoonDaysIndexPage({super.key});
 
+  @override
+  State<HsoonDaysIndexPage> createState() => _HsoonDaysIndexPageState();
+}
+
+class _HsoonDaysIndexPageState extends State<HsoonDaysIndexPage>
+    with SingleTickerProviderStateMixin {
   static const taskKeys = [
     'reading',
     'listening',
@@ -438,10 +477,43 @@ class HsoonDaysIndexPage extends StatelessWidget {
     'far_second_overflow',
   ];
 
+  late TabController _tabController;
+  DateTime? startDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 21, vsync: this);
+    _loadInitialData();
+  }
+
+  void _loadInitialData() async {
+    startDate = await AppStorage.getStartDate();
+    final day = await AppStorage.getDay();
+    final monthIndex = (day - 1) ~/ 30;
+    if (monthIndex < 21) {
+      _tabController.index = monthIndex;
+    }
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("فهرس أيام الحصون")),
+      appBar: AppBar(
+        title: const Text("فهرس الحصون"),
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          tabs: List.generate(21, (index) => Tab(text: "الشهر ${index + 1}")),
+        ),
+      ),
       body: FutureBuilder<Map<int, Map<String, bool>>>(
         future: AppStorage.getAllDaysStatus(),
         builder: (context, snapshot) {
@@ -450,136 +522,82 @@ class HsoonDaysIndexPage extends StatelessWidget {
           }
           final allStatus = snapshot.data!;
 
-          // تقسيم الأيام لمجموعات كل مجموعة 30 يوماً
-          const daysPerGroup = 30;
-          const totalDays = 604;
-          final groupCount = (totalDays / daysPerGroup).ceil();
+          return TabBarView(
+            controller: _tabController,
+            children: List.generate(21, (monthIndex) {
+              final startDay = (monthIndex * 30) + 1;
+              final endDay = (startDay + 29 > 604) ? 604 : startDay + 29;
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: groupCount,
-            itemBuilder: (context, groupIndex) {
-              final startDay = (groupIndex * daysPerGroup) + 1;
-              final endDay = (startDay + daysPerGroup - 1 > totalDays)
-                  ? totalDays
-                  : startDay + daysPerGroup - 1;
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: (endDay - startDay + 1),
+                itemBuilder: (context, index) {
+                  final day = startDay + index;
+                  final status = allStatus[day] ?? {};
+                  final date = startDate?.add(Duration(days: day - 1));
+                  final dateStr = date != null
+                      ? DateFormat('EEEE, d MMMM', 'ar').format(date)
+                      : "اليوم $day";
 
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(
-                      "الأيام: $startDay - $endDay",
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.brown,
-                      ),
-                    ),
-                  ),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 5,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 1,
-                        ),
-                    itemCount: (endDay - startDay + 1),
-                    itemBuilder: (context, index) {
-                      final day = startDay + index;
-                      final status = allStatus[day] ?? {};
-                      return _buildDaySquare(context, day, status);
-                    },
-                  ),
-                  const Divider(height: 32),
-                ],
+                  return _buildDayTile(context, day, dateStr, status);
+                },
               );
-            },
+            }),
           );
         },
       ),
     );
   }
 
-  Widget _buildDaySquare(
+  Widget _buildDayTile(
     BuildContext context,
     int day,
+    String dateLabel,
     Map<String, bool> status,
   ) {
     final completedTasks = status.values.where((v) => v == true).length;
-    final isAllDone = completedTasks == 10;
+    final progress = completedTasks / 10.0;
+    final isDone = completedTasks == 10;
 
-    return InkWell(
-      onTap: () => Navigator.pop(context, day),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isAllDone ? Colors.green : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.grey[400]!),
-          boxShadow: [
-            if (status.isNotEmpty)
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 2,
-                offset: const Offset(0, 2),
-              ),
-          ],
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        onTap: () => Navigator.pop(context, day),
+        leading: CircleAvatar(
+          backgroundColor: isDone ? Colors.green : Colors.brown.shade100,
+          foregroundColor: isDone ? Colors.white : Colors.brown.shade800,
+          child: Text("$day"),
         ),
-        child: Stack(
+        title: Text(
+          dateLabel,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // عرض اليوم في المنتصف
-            Center(
-              child: Text(
-                "$day",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: isAllDone ? Colors.white : Colors.black87,
-                ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey.shade200,
+                color: isDone ? Colors.green : Colors.orange,
+                minHeight: 6,
               ),
             ),
-            // لو اليوم مش كامل، نعرض الـ 10 مربعات الصغيرة للحالة
-            if (!isAllDone && status.isNotEmpty)
-              Positioned.fill(
-                child: Padding(
-                  padding: const EdgeInsets.all(2),
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 5,
-                          crossAxisSpacing: 1,
-                          mainAxisSpacing: 1,
-                        ),
-                    itemCount: 10,
-                    itemBuilder: (ctx, i) {
-                      final key = taskKeys[i];
-                      final isTaskDone = status[key] ?? false;
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: isTaskDone
-                              ? Colors.green.withOpacity(0.5)
-                              : Colors.red.withOpacity(0.5),
-                          borderRadius: BorderRadius.circular(1),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            // لو اليوم لسه مبدأش خالص (status فاضي) يفضل رمادي خفيف
-            if (status.isEmpty)
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[100],
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
+            const SizedBox(height: 4),
+            Text(
+              "تم إنجاز $completedTasks من 10 مهام",
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
           ],
+        ),
+        trailing: Icon(
+          isDone ? Icons.check_circle : Icons.chevron_right,
+          color: isDone ? Colors.green : Colors.grey,
         ),
       ),
     );

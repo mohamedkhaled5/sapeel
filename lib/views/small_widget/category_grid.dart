@@ -12,7 +12,7 @@ Widget buildCategoryGrid(BuildContext context) {
       'title': 'الحديث',
       'icon': Icons.history_edu,
       'color': Colors.amber,
-      'route': '/hadith',
+      'route': '/hadeth',
     },
     {
       'title': 'مواقيت الصلاة',
@@ -33,7 +33,7 @@ Widget buildCategoryGrid(BuildContext context) {
       'route': '/qibla',
     },
     {
-      'title': 'دار العلم',
+      'title': 'المكتبه الإسلامية',
       'icon': Icons.library_books,
       'color': Colors.teal,
       'route': '/islamic_library',

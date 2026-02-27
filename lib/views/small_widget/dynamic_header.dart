@@ -25,14 +25,15 @@ class _DynamicHeaderState extends State<DynamicHeader> {
 
   void _updateDateTime() {
     final now = DateTime.now();
-    
+
     // التاريخ الهجري
     final hijriNow = HijriCalendar.now();
-    _hijriDate = "${hijriNow.hDay} ${hijriNow.longMonthName}, ${hijriNow.hYear}";
+    _hijriDate =
+        "${hijriNow.hDay} ${hijriNow.longMonthName}, ${hijriNow.hYear}";
 
     // التاريخ الميلادي
     _gregorianDate = DateFormat('EEEE, d MMMM yyyy', 'ar').format(now);
-    
+
     setState(() {});
   }
 
@@ -49,13 +50,20 @@ class _DynamicHeaderState extends State<DynamicHeader> {
 
   String _getPrayerName(Prayer prayer) {
     switch (prayer) {
-      case Prayer.fajr: return "الفجر";
-      case Prayer.sunrise: return "الشروق";
-      case Prayer.dhuhr: return "الظهر";
-      case Prayer.asr: return "العصر";
-      case Prayer.maghrib: return "المغرب";
-      case Prayer.isha: return "العشاء";
-      default: return "القيام";
+      case Prayer.fajr:
+        return "الفجر";
+      case Prayer.sunrise:
+        return "الشروق";
+      case Prayer.dhuhr:
+        return "الظهر";
+      case Prayer.asr:
+        return "العصر";
+      case Prayer.maghrib:
+        return "المغرب";
+      case Prayer.isha:
+        return "العشاء";
+      default:
+        return "القيام";
     }
   }
 
@@ -103,8 +111,8 @@ class _DynamicHeaderState extends State<DynamicHeader> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _prayerTimes == null 
-                          ? 'جاري التحميل...' 
+                      _prayerTimes == null
+                          ? 'جاري التحميل...'
                           : 'الصلاة القادمة: ${_getPrayerName(nextPrayer)}',
                       style: const TextStyle(
                         color: Colors.white,
@@ -114,7 +122,10 @@ class _DynamicHeaderState extends State<DynamicHeader> {
                     if (nextPrayerTime != null)
                       Text(
                         DateFormat.jm('ar').format(nextPrayerTime),
-                        style: const TextStyle(color: Colors.white, fontSize: 18),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                        ),
                       ),
                   ],
                 ),
@@ -123,11 +134,17 @@ class _DynamicHeaderState extends State<DynamicHeader> {
                   children: [
                     Text(
                       _hijriDate,
-                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     Text(
                       _gregorianDate,
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),

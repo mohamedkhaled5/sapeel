@@ -1,7 +1,6 @@
 import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:hive/hive.dart';
-import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 
 class PrayerService {
   static const boxName = "prayer_settings";
@@ -58,7 +57,7 @@ class PrayerService {
   static Future<PrayerTimes> getPrayerTimes() async {
     final settings = await getSettings();
     final bool autoLocation = settings["autoLocation"];
-    
+
     Coordinates coords;
 
     if (autoLocation) {
@@ -67,7 +66,8 @@ class PrayerService {
         coords = Coordinates(position.latitude, position.longitude);
       } catch (e) {
         // لو فشل الـ GPS، نستخدم المدينة المختارة كـ fallback
-        coords = cityCoordinates[settings["city"]] ?? cityCoordinates["القاهرة"]!;
+        coords =
+            cityCoordinates[settings["city"]] ?? cityCoordinates["القاهرة"]!;
       }
     } else {
       coords = cityCoordinates[settings["city"]] ?? cityCoordinates["القاهرة"]!;
@@ -81,11 +81,17 @@ class PrayerService {
   }
 
   static CalculationMethod _getMethodFromName(String name) {
-    return CalculationMethod.values.firstWhere((e) => e.name == name, orElse: () => CalculationMethod.egyptian);
+    return CalculationMethod.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => CalculationMethod.egyptian,
+    );
   }
 
   static Madhab _getMadhabFromName(String name) {
-    return Madhab.values.firstWhere((e) => e.name == name, orElse: () => Madhab.shafi);
+    return Madhab.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => Madhab.shafi,
+    );
   }
 
   /// تحديد الصلاة القادمة والعد التنازلي
@@ -104,11 +110,17 @@ class PrayerService {
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return Future.error('صلاحية الموقع مرفوضة.');
+      if (permission == LocationPermission.denied) {
+        return Future.error('صلاحية الموقع مرفوضة.');
+      }
     }
 
-    if (permission == LocationPermission.deniedForever) return Future.error('صلاحية الموقع مرفوضة بشكل دائم.');
+    if (permission == LocationPermission.deniedForever) {
+      return Future.error('صلاحية الموقع مرفوضة بشكل دائم.');
+    }
 
-    return await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.low);
+    return await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.low,
+    );
   }
 }

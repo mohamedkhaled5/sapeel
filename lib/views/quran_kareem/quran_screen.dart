@@ -24,11 +24,11 @@ class _QuranScreenState extends State<QuranScreen> {
   void initState() {
     super.initState();
     AppStorage.saveLastRoute('/al_quran');
-    // بدء عملية جلب البيانات عند تهيئة الشاشة
+    // جلب البيانات أوفلاين بالكامل
     surahs = fetchSurahs();
   }
 
-  /// دالة لجلب البيانات وتحويلها إلى قائمة من كائنات SurahData
+  /// دالة لجلب البيانات أوفلاين
   Future<List<SurahData>> fetchSurahs() async {
     final data = await QuranService.getSurahs();
     return data.map<SurahData>((json) => SurahData.fromJson(json)).toList();

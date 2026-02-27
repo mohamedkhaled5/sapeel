@@ -356,7 +356,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 ),
                 if (!_autoLocation)
                   DropdownButtonFormField<String>(
-                    value: _selectedCity,
+                    initialValue: _selectedCity,
                     decoration: const InputDecoration(
                       labelText: "اختر المدينة",
                     ),
@@ -373,7 +373,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                   ),
                 const Divider(),
                 DropdownButtonFormField<CalculationMethod>(
-                  value: _selectedMethod,
+                  initialValue: _selectedMethod,
                   decoration: const InputDecoration(labelText: "طريقة الحساب"),
                   items: [
                     const DropdownMenuItem(
@@ -400,7 +400,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 ),
                 const SizedBox(height: 10),
                 DropdownButtonFormField<Madhab>(
-                  value: _selectedMadhab,
+                  initialValue: _selectedMadhab,
                   decoration: const InputDecoration(
                     labelText: "المذهب (لصلاة العصر)",
                   ),

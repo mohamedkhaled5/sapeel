@@ -18,7 +18,7 @@ class SurahDetailScreen extends StatefulWidget {
 class _SurahDetailScreenState extends State<SurahDetailScreen> {
   // --- البيانات والحالة ---
   late Future<SurahDetail> surahFuture;
-  bool isTextMode = false; // التبديل بين وضع الصور (المصحف) ووضع النص
+  bool isTextMode = true; // الافتراضي هو وضع النص (أوفلاين بالكامل)
 
   // --- حالة وضع الصور (المصحف) ---
   bool isLoadingMushaf = true;
@@ -33,7 +33,7 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // جلب بيانات السورة
+    // جلب بيانات السورة (الآن أوفلاين بالكامل)
     surahFuture = QuranService.getSurahDetail(widget.surahNumber);
     _checkMushafStatus();
   }
@@ -43,6 +43,9 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
     final downloaded = await MushafService.isDownloaded();
     if (downloaded) {
       mushafPath = await MushafService.getMushafPath();
+      isTextMode = false; // لو الصور موجودة، نظهرها
+    } else {
+      isTextMode = true; // لو الصور مش موجودة، نظهر النص تلقائياً (أوفلاين)
     }
     if (mounted) {
       setState(() {
@@ -191,17 +194,20 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(
-                    Icons.cloud_download_outlined,
+                    Icons.image_not_supported_outlined,
                     size: 80,
                     color: Colors.grey,
                   ),
                   const SizedBox(height: 16),
-                  const Text("تحتاج لتحميل صفحات المصحف أولاً"),
+                  const Text(
+                    "وضع المصحف (الصور) يحتاج للتحميل لمرة واحدة فقط\nالنص متاح حالياً أوفلاين",
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 20),
                   ElevatedButton.icon(
                     onPressed: _startDownload,
                     icon: const Icon(Icons.download),
-                    label: const Text("تحميل الآن (150MB)"),
+                    label: const Text("تحميل صور المصحف (150MB)"),
                   ),
                 ],
               ),

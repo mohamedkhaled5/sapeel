@@ -2,34 +2,41 @@ import 'package:hive/hive.dart';
 
 class AppStorage {
   static const boxName = "memorization_box";
+  static Box? _box;
+
+  static Future<Box> _getBox() async {
+    if (_box != null && _box!.isOpen) return _box!;
+    _box = await Hive.openBox(boxName);
+    return _box!;
+  }
 
   static Future saveStartPage(int page) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("startPage", page);
   }
 
   static Future<int?> getStartPage() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("startPage");
   }
 
   static Future saveDay(int day) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("currentDay", day);
   }
 
   static Future<int> getDay() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("currentDay", defaultValue: 1);
   }
 
   static Future saveDailyStatus(int day, Map<String, bool> data) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("day_$day", data);
   }
 
   static Future<Map<String, bool>> getDailyStatus(int day) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     final data = box.get("day_$day");
 
     if (data == null) {
@@ -51,44 +58,58 @@ class AppStorage {
   }
 
   static Future saveFarBlockSize(int size) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("farBlockSize", size);
   }
 
   static Future<int> getFarBlockSize() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("farBlockSize", defaultValue: 40);
   }
 
   static Future reset() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.clear();
   }
 
   static Future saveWeeklyBreakEnabled(bool value) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("weeklyBreak", value);
   }
 
   static Future<bool> getWeeklyBreakEnabled() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("weeklyBreak", defaultValue: false);
+  }
+
+  static Future saveStartDate(DateTime date) async {
+    final box = await _getBox();
+    await box.put("startDate", date.toIso8601String());
+  }
+
+  static Future<DateTime?> getStartDate() async {
+    final box = await _getBox();
+    final dateStr = box.get("startDate");
+    if (dateStr != null) {
+      return DateTime.tryParse(dateStr);
+    }
+    return null;
   }
 
   // --- حفظ المسارات (Navigation Tracking) ---
 
   static Future saveLastRoute(String routeName) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     await box.put("lastRoute", routeName);
   }
 
   static Future<String?> getLastRoute() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("lastRoute");
   }
 
   static Future<bool> isFirstLaunch() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     final isFirst = box.get("isFirstLaunch", defaultValue: true);
     if (isFirst) {
       await box.put("isFirstLaunch", false);
@@ -100,14 +121,14 @@ class AppStorage {
 
   /// زيادة عداد الإكمال لفئة معينة
   static Future incrementStats(String category) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     int current = box.get("stats_count_$category", defaultValue: 0);
     await box.put("stats_count_$category", current + 1);
   }
 
   /// تقليل عداد الإكمال لفئة معينة (في حال إلغاء الـ check)
   static Future decrementStats(String category) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     int current = box.get("stats_count_$category", defaultValue: 0);
     if (current > 0) {
       await box.put("stats_count_$category", current - 1);
@@ -116,13 +137,13 @@ class AppStorage {
 
   /// الحصول على عدد المرات التي تم فيها إكمال جزء من فئة معينة
   static Future<int> getStats(String category) async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     return box.get("stats_count_$category", defaultValue: 0);
   }
 
   /// الحصول على حالة جميع الأيام (للفهرس الملون)
   static Future<Map<int, Map<String, bool>>> getAllDaysStatus() async {
-    final box = await Hive.openBox(boxName);
+    final box = await _getBox();
     Map<int, Map<String, bool>> allStatus = {};
     for (var key in box.keys) {
       if (key is String && key.startsWith("day_")) {

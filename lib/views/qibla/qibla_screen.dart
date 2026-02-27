@@ -20,7 +20,7 @@ class _QiblaScreenState extends State<QiblaScreen>
 
   late AnimationController _animationController;
   late Animation<double> _animation;
-  double _lastHeading = 0;
+  final double _lastHeading = 0;
 
   @override
   void initState() {

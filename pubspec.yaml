@@ -41,13 +41,15 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   flutter_svg: ^2.2.3
-
+  flutter_launcher_icons: ^0.14.4
 flutter:
   uses-material-design: true
 
   assets:
     - assets/icons/kaaba.svg
     - assets/icons/mosque.svg
+    - assets/icons/radio.svg
+    - assets/icons/sapeel.png
 
   fonts:
     - family: Amiri
@@ -61,3 +63,9 @@ flutter:
     - family: LilitaOne
       fonts:
         - asset: assets/fonts/Lilita_One/LilitaOne-Regular.ttf
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/sapeel.png"
+  adaptive_icon_background: "#1B5E20"
+  adaptive_icon_foreground: "assets/icons/sapeel.png"

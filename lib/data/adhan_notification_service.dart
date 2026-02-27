@@ -101,16 +101,26 @@ class AdhanNotificationService {
 
     final String prayerName = _getPrayerNameArabic(nextPrayer);
 
+    // التحقق من صلاحيات الإشعارات (لأندرويد 13+)
+    final bool? granted = await _plugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.requestNotificationsPermission();
+
+    if (granted == false) {
+      print("Notification permission not granted");
+    }
+
     await _plugin.show(
       0, // ID ثابت لإشعار العد التنازلي
       "الصلاة القادمة: $prayerName",
       "بقي على الأذان:",
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'countdown_channel_v2', // تغيير اسم القناة لضمان تحديث الإعدادات
+          'countdown_channel_v3', // تغيير اسم القناة لضمان تحديث الإعدادات
           'العد التنازلي للصلاة',
           channelDescription: 'إشعار مستمر يظهر الوقت المتبقي للصلاة القادمة',
-          importance: Importance.max, // رفع الأهمية لضمان الظهور
+          importance: Importance.max,
           priority: Priority.high,
           ongoing: true,
           showWhen: true,
@@ -118,8 +128,8 @@ class AdhanNotificationService {
           usesChronometer: true,
           chronometerCountDown: true,
           icon: '@mipmap/ic_launcher',
-          visibility:
-              NotificationVisibility.public, // السماح بالظهور في شاشة القفل
+          visibility: NotificationVisibility.public,
+          category: AndroidNotificationCategory.alarm,
         ),
       ),
     );

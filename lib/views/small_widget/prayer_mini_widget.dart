@@ -43,13 +43,15 @@ class _PrayerMiniWidgetState extends State<PrayerMiniWidget> {
       if (mounted) {
         setState(() {
           _prayerTimes = times;
-          // تحديث العد التنازلي فوراً عند تحميل الأوقات
           _countdown = PrayerService.getCountdown(times);
         });
-        // تحديث الإشعارات والعداد التلقائي في شريط الإشعارات
-        AdhanNotificationService.schedulePrayerNotifications(times);
+        
+        // جدولة الإشعارات والعداد في الخلفية
+        await AdhanNotificationService.schedulePrayerNotifications(times);
       }
-    } catch (_) {}
+    } catch (e) {
+      print("Error loading times in MiniWidget: $e");
+    }
   }
 
   String _getPrayerName(Prayer prayer) {

@@ -11,6 +11,22 @@ class IslamicLibraryScreen extends StatefulWidget {
 
 class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
   late final WebViewController _controller;
+
+  // generate soft color from string
+  Color generateSoftColor(String input) {
+    final hash = input.hashCode;
+
+    final hue = (hash % 360).toDouble();
+
+    return HSVColor.fromAHSV(
+      1.0,
+      hue,
+      0.45, // saturation
+      0.65, // brightness
+    ).toColor();
+  }
+  // update dynamic color from favicon
+
   final Map<String, String> websites = {
     'المكتبة الشاملة': 'https://shamela.ws/',
     'تراث': 'https://app.turath.io/',
@@ -18,7 +34,7 @@ class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
     'المقرئ': 'https://ar.muqri.com/',
     'التفسير التفاعلي': 'https://read.tafsir.one/',
     'الباحث الحديثي': 'https://sunnah.one/',
-    'تطبيق فائدة': 'https://faidah.app/',
+    // 'تطبيق فائدة': 'https://faidah.app/',
     'تكوين الراسخين': 'https://takw.in/',
     'القارئ': 'https://qari.app/',
     'المصحف المحفّظ': 'https://muhaffidh.app/',
@@ -29,7 +45,7 @@ class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
     'كلمة': 'https://kalimah.app/',
     'حفظ': 'https://hifdh.app/',
     'المصحف': 'https://almushaf.app/',
-    'راوي': 'https://rawy.net/',
+    // 'راوي': 'https://rawy.net/',
   };
 
   String selectedSite = 'المكتبة الشاملة';
@@ -51,8 +67,7 @@ class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
     'الباحث الحديثي':
         'محرك بحث حديثي متقدم، تكتب جزءًا من الحديث فيُخرج لك جميع الروايات مع بيان درجة صحتها.',
 
-    'تطبيق فائدة': 'تعلَّم واستفد دون أن يكون ضيق الوقت أو النسيان عائقًا.',
-
+    // 'تطبيق فائدة': 'تعلَّم واستفد دون أن يكون ضيق الوقت أو النسيان عائقًا.',
     'تكوين الراسخين':
         'منهج محرر في طلب العلم الشرعي مع سهولة الوصول إلى المتون والمنظومات والشروح المكتوبة والصوتية والمرئية.',
 
@@ -77,8 +92,8 @@ class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
     'المصحف':
         'نسخة رقمية عالية الجودة من مصحف المدينة المنورة لمجمع الملك فهد، سريعة وسهلة الاستخدام.',
 
-    'راوي':
-        'مكتبة صوتية متكاملة تضم آلاف الكتب الإسلامية بواجهة أنيقة وميزات متقدمة، تعمل حتى بدون إنترنت.',
+    // 'راوي':
+    //     'مكتبة صوتية متكاملة تضم آلاف الكتب الإسلامية بواجهة أنيقة وميزات متقدمة، تعمل حتى بدون إنترنت.',
   };
 
   @override
@@ -95,42 +110,128 @@ class _IslamicLibraryScreenState extends State<IslamicLibraryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentColor = generateSoftColor(selectedSite);
+    final isDark =
+        ThemeData.estimateBrightnessForColor(currentColor) == Brightness.dark;
+
+    final foregroundColor = isDark ? Colors.white : Colors.black;
     return Scaffold(
       appBar: AppBar(
-        title: Text(selectedSite),
+        elevation: 0,
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+
+        flexibleSpace: TweenAnimationBuilder<Color?>(
+          tween: ColorTween(begin: Colors.transparent, end: currentColor),
+          duration: const Duration(milliseconds: 600),
+          builder: (context, color, _) {
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [color!, color.withValues(alpha: .75)],
+                ),
+              ),
+            );
+          },
+        ),
+
+        iconTheme: IconThemeData(color: foregroundColor),
+
+        title: Text(
+          selectedSite,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+            color: foregroundColor,
+          ),
+        ),
+
         leading: Builder(
           builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
+            icon: const Icon(Icons.menu_rounded),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
+
         actions: [
           IconButton(
-            icon: const Icon(Icons.arrow_back),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded),
             onPressed: () => Navigator.pop(context),
           ),
         ],
       ),
       drawer: Drawer(
+        width: 285,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.horizontal(left: Radius.circular(50)),
+        ),
         child: ListView(
+          padding: EdgeInsets.zero,
           children: [
+            /// ===== HEADER =====
             DrawerHeader(
-              decoration: BoxDecoration(color: Colors.green),
-              child: Text(
-                'المكتبة الإسلامية',
-                style: TextStyle(color: Colors.white, fontSize: 20),
+              padding: EdgeInsets.zero,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeInOutCubic,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [currentColor, currentColor.withValues(alpha: .8)],
+                  ),
+                ),
+                child: Center(
+                  child: Text(
+                    'المكتبة الإسلامية',
+                    style: TextStyle(
+                      color: foregroundColor,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                    ),
+                  ),
+                ),
               ),
             ),
+
+            /// ===== MENU ITEMS =====
             ...websites.keys.map((site) {
-              return ListTile(
-                title: Text(site),
-                onTap: () {
-                  setState(() {
-                    selectedSite = site;
-                    loadWebsite(websites[site]!);
-                  });
-                  Navigator.pop(context); // يقفل الـ Drawer
-                },
+              final isSelected = selectedSite == site;
+
+              return Column(
+                children: [
+                  ListTile(
+                    leading: Icon(
+                      Icons.menu_book_rounded,
+                      color: isSelected ? currentColor : Colors.grey,
+                    ),
+
+                    title: Text(
+                      site,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
+                        color: isSelected ? currentColor : Colors.black87,
+                      ),
+                    ),
+
+                    selectedTileColor: currentColor.withValues(alpha: .08),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    onTap: () {
+                      setState(() {
+                        selectedSite = site;
+                        loadWebsite(websites[site]!);
+                      });
+                      Navigator.pop(context);
+                    },
+                  ),
+                  const Divider(height: 8),
+                ],
               );
             }),
           ],

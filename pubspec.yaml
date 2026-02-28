@@ -34,7 +34,8 @@ dependencies:
   quran: ^1.4.1
 
   webview_flutter: ^4.13.1
-  
+  palette_generator: ^0.3.3+7
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

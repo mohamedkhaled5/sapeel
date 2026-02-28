@@ -12,7 +12,11 @@ class _HadeethScreenState extends State<HadeethScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Hadeth Screen')),
-      body: const Center(child: Text('Hadeth Screen Content')),
+      body: const Center(
+        child: Text(
+          'نراكم قريبا (يمكنكم استعمال المكتبه الاسلاميه للوصول لبعض كتب الاحاديث وبعض التقنيات المناسبه لحين اتاحةهذه الميزه شكرا علي تفهمكم)',
+        ),
+      ),
     );
   }
 }

@@ -8,8 +8,13 @@ import 'package:sapeel/utils/quran_metadata.dart';
 /// شاشة تفاصيل السورة: تدمج بين عرض المصحف (صور) وعرض الآيات (نص)
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;
+  final int? initialPage; // إضافة معامل اختياري لرقم الصفحة
 
-  const SurahDetailScreen({super.key, required this.surahNumber});
+  const SurahDetailScreen({
+    super.key,
+    required this.surahNumber,
+    this.initialPage,
+  });
 
   @override
   State<SurahDetailScreen> createState() => _SurahDetailScreenState();
@@ -35,6 +40,15 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
     super.initState();
     // جلب بيانات السورة (الآن أوفلاين بالكامل)
     surahFuture = QuranService.getSurahDetail(widget.surahNumber);
+
+    // إذا تم تمرير رقم صفحة بدلاً من رقم سورة (كما في نظام الحصون)
+    if (widget.initialPage != null) {
+      currentPage = widget.initialPage!;
+      _pageController = PageController(initialPage: currentPage - 1);
+    } else {
+      _pageController = PageController(); // سيتم تحديثه عند تحميل السورة
+    }
+
     _checkMushafStatus();
   }
 
@@ -97,12 +111,14 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
 
         final surah = snapshot.data!;
 
-        // إعداد البيانات الأولية عند تحميل السورة لأول مرة
+        // إعداد البيانات الأولية عند تحميل السورة لأول مرة (فقط إذا لم يتم تمرير صفحة بداية)
         if (currentSurahName.isEmpty) {
-          currentPage = surah.ayahs.first["page"];
+          if (widget.initialPage == null) {
+            currentPage = surah.ayahs.first["page"];
+            _pageController = PageController(initialPage: currentPage - 1);
+          }
           currentJuz = QuranMetadata.getJuzByPage(currentPage);
           currentSurahName = QuranMetadata.getSurahNameByPage(currentPage);
-          _pageController = PageController(initialPage: currentPage - 1);
         }
 
         return Scaffold(

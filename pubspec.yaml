@@ -51,6 +51,7 @@ flutter:
     - assets/icons/mosque.svg
     - assets/icons/radio.svg
     - assets/icons/sapeel.png
+    - assets/data/quran.json
 
   fonts:
     - family: Amiri

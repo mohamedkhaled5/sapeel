@@ -35,7 +35,14 @@ class _StartSetupScreenState extends State<StartSetupScreen> {
         initialDate: selectedDate,
         firstDate: DateTime(2000),
         lastDate: DateTime(2101),
-        // سيتم استخدام اللغة العربية تلقائياً بناءً على إعدادات MaterialApp
+        builder: (context, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.green),
+            ),
+            child: child!,
+          );
+        },
       );
       if (picked != null && picked != selectedDate) {
         setState(() {

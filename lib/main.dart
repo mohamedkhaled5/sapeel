@@ -54,10 +54,26 @@ class QuranApp extends StatelessWidget {
       onGenerateRoute: (settings) {
         switch (settings.name) {
           case '/surah_detail':
-            final surahNumber = settings.arguments as int;
-            return MaterialPageRoute(
-              builder: (_) => SurahDetailScreen(surahNumber: surahNumber),
-            );
+            if (settings.arguments is Map<String, dynamic>) {
+              final args = settings.arguments as Map<String, dynamic>;
+              if (args.containsKey('page')) {
+                final page = args['page'] as int;
+                return MaterialPageRoute(
+                  builder: (_) => SurahDetailScreen(
+                    surahNumber: 1, // سيتم تجاوزه بـ initialPage
+                    initialPage: page,
+                  ),
+                );
+              }
+            }
+            if (settings.arguments is int) {
+              final arg = settings.arguments as int;
+              // لو جاي من الفهرس التقليدي (رقم سورة)
+              return MaterialPageRoute(
+                builder: (_) => SurahDetailScreen(surahNumber: arg),
+              );
+            }
+            return MaterialPageRoute(builder: (_) => const HomeScreen());
 
           case '/al_quran':
             return MaterialPageRoute(builder: (_) => const QuranScreen());

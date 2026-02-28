@@ -49,8 +49,8 @@ class AppStorage {
         "new": false,
         "near": false,
         "far": false,
-        "farOverflow": false,
-        "farSecondOverflow": false,
+        "far_overflow": false,
+        "far_second_overflow": false,
       };
     }
 

@@ -4,6 +4,8 @@ import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 import 'package:sapeel/views/hosoon_khamsa/memorization_engine.dart';
 import 'package:intl/intl.dart';
+import 'package:sapeel/data/quran_repository.dart';
+import 'package:sapeel/utils/quran_metadata.dart';
 
 /// شاشة متابعة "الحصون الخمسة" للمراجعة والحفظ اليومي
 class QuranFollowUpFlow extends StatefulWidget {
@@ -15,6 +17,9 @@ class QuranFollowUpFlow extends StatefulWidget {
 
 class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   // --- المتغيرات والحالة ---
+  final QuranRepository _quranRepo = QuranRepository();
+  bool _isRepoLoaded = false;
+
   int startPage = 0;
   int currentDay = 1;
   int farBlockSize = 40;
@@ -28,8 +33,26 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   }
 
   void _initAsync() async {
-    await AppStorage.saveLastRoute('/dua');
-    _loadProgress();
+    try {
+      await AppStorage.saveLastRoute('/dua');
+      await _quranRepo.init();
+      if (mounted) {
+        setState(() {
+          _isRepoLoaded = true;
+        });
+      }
+      _loadProgress();
+    } catch (e) {
+      debugPrint("Error in _initAsync: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("تعذر تحميل البيانات")));
+        setState(
+          () => _isRepoLoaded = true,
+        ); // تجاوز الخطأ للسماح للمستخدم بالتصرف
+      }
+    }
   }
 
   /// تحميل التقدم المحفوظ من التخزين المحلي
@@ -95,7 +118,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   @override
   Widget build(BuildContext context) {
     // حالة الانتظار لحين تحميل البيانات
-    if (startPage == 0) {
+    if (startPage == 0 || !_isRepoLoaded) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
@@ -164,64 +187,68 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
             Expanded(
               child: ListView(
                 children: [
-                  _buildTile(
-                    "📖 القراءة",
-                    "جزء ${engine.readingJuz} & ${(engine.readingJuz) + 1}",
-                    "reading",
-                  ),
+                  _buildReadingTile(engine),
                   _buildTile(
                     "🎧 الاستماع",
                     "حزب ${engine.listeningHizb}",
                     "listening",
                   ),
-                  _buildTile(
+                  const Divider(height: 32),
+                  _buildEnhancedTile(
                     "📅 التحضير الأسبوعي",
-                    "${engine.weeklyPrep['start']} - ${engine.weeklyPrep['end']}",
+                    engine.weeklyPrep['start']!,
+                    engine.weeklyPrep['end']!,
                     "weekly",
                   ),
-                  _buildTile(
-                    "🌙 التحضير الليلي",
-                    engine.nightPrep?.toString() ?? "-",
-                    "night",
-                  ),
-                  _buildTile(
-                    "⏳ التحضير القبلي",
-                    engine.qabliy?.toString() ?? "-",
-                    "qabliy",
-                  ),
-                  _buildTile(
-                    "📝 الحفظ الجديد",
-                    engine.newPage?.toString() ?? "-",
-                    "new",
-                  ),
-                  _buildTile(
-                    "🔁 مراجعة القريب",
-                    engine.nearReview == null
-                        ? "-"
-                        : "${engine.nearReview!['start']} - ${engine.nearReview!['end']}",
-                    "near",
-                  ),
-                  _buildTile(
-                    "📦 مراجعة البعيد",
-                    engine.farReview == null
-                        ? "-"
-                        : "${engine.farReview!['start']} - ${engine.farReview!['end']}",
-                    "far",
-                  ),
-                  _buildTile(
-                    "📦 (الثاني) مراجعة البعيد",
-                    engine.farOverflowReview == null
-                        ? "-"
-                        : "${engine.farOverflowReview!['start']} - ${engine.farOverflowReview!['end']}",
-                    "far_overflow",
-                  ),
-                  _buildTile(
-                    "📦 (الثالث) مراجعة البعيد",
-                    engine.farSecondOverflowReview == null
-                        ? "-"
-                        : "${engine.farSecondOverflowReview!['start']} - ${engine.farSecondOverflowReview!['end']}",
-                    "far_second_overflow",
-                  ),
+                  if (engine.nightPrep != null)
+                    _buildEnhancedTile(
+                      "🌙 التحضير الليلي",
+                      engine.nightPrep!,
+                      engine.nightPrep!,
+                      "night",
+                    ),
+                  if (engine.qabliy != null)
+                    _buildEnhancedTile(
+                      "⏳ التحضير القبلي",
+                      engine.qabliy!,
+                      engine.qabliy!,
+                      "qabliy",
+                    ),
+                  if (engine.newPage != null)
+                    _buildEnhancedTile(
+                      "📝 الحفظ الجديد",
+                      engine.newPage!,
+                      engine.newPage!,
+                      "new",
+                    ),
+                  if (engine.nearReview != null)
+                    _buildEnhancedTile(
+                      "🔁 مراجعة القريب",
+                      engine.nearReview!['start']!,
+                      engine.nearReview!['end']!,
+                      "near",
+                    ),
+                  if (engine.farReview != null)
+                    _buildEnhancedTile(
+                      "📦 مراجعة البعيد (1)",
+                      engine.farReview!['start']!,
+                      engine.farReview!['end']!,
+                      "far",
+                    ),
+                  if (engine.farOverflowReview != null)
+                    _buildEnhancedTile(
+                      "📦 (الثاني) مراجعة البعيد",
+                      engine.farOverflowReview!['start']!,
+                      engine.farOverflowReview!['end']!,
+                      "far_overflow",
+                    ),
+                  if (engine.farSecondOverflowReview != null)
+                    _buildEnhancedTile(
+                      "📦 (الثالث) مراجعة البعيد",
+                      engine.farSecondOverflowReview!['start']!,
+                      engine.farSecondOverflowReview!['end']!,
+                      "far_second_overflow",
+                    ),
                 ],
               ),
             ),
@@ -233,11 +260,159 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     );
   }
 
+  /// بناء عنصر قائمة خاص بمهمة القراءة (جزءين يومياً) مع زر الانتقال
+  Widget _buildReadingTile(MemorizationEngine engine) {
+    final j1 = engine.readingJuz;
+    final j2 = (j1 % 30) + 1;
+
+    // الحصول على أرقام الصفحات من Metadata
+    // juzStartPages هي قائمة من 30 عنصراً (من 0 إلى 29)
+    final startP = QuranMetadata.juzStartPages[j1 - 1];
+
+    // نهاية الجزء الثاني هي بداية الجزء الثالث ناقص 1
+    // إذا كان الجزء الثاني هو 30، فالنهاية هي 604
+    int endP;
+    if (j2 == 30) {
+      endP = 604;
+    } else {
+      endP = QuranMetadata.juzStartPages[j2] - 1;
+    }
+
+    return _buildEnhancedTile(
+      "📖 القراءة",
+      startP,
+      endP,
+      "reading",
+      customSubtitle: "جزء $j1 & $j2",
+    );
+  }
+
+  /// بناء عنصر قائمة محسّن ببيانات السور والآيات وزر الانتقال
+  Widget _buildEnhancedTile(
+    String title,
+    int startP,
+    int endP,
+    String statusKey, {
+    String? customSubtitle,
+  }) {
+    final isDone = dailyStatus[statusKey] ?? false;
+    final metadata = _quranRepo.getRangeMetadata(startP, endP);
+
+    return Card(
+      elevation: isDone ? 0 : 2,
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: isDone ? Colors.green.withOpacity(0.2) : Colors.transparent,
+        ),
+      ),
+      color: isDone ? Colors.green.withOpacity(0.05) : null,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            CheckboxListTile(
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+              title: Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  Text(
+                    "📖 ${metadata['surahRange']}",
+                    style: const TextStyle(
+                      color: Colors.black87,
+                      fontSize: 13,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.description_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        metadata['pageRange'],
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Icon(
+                        Icons.mosque_outlined,
+                        size: 14,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        metadata['jozzRange'],
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              value: isDone,
+              onChanged: (val) async {
+                if (val == true) {
+                  await AppStorage.incrementStats(statusKey);
+                } else {
+                  await AppStorage.decrementStats(statusKey);
+                }
+                setState(() => dailyStatus[statusKey] = val!);
+                await AppStorage.saveDailyStatus(currentDay, dailyStatus);
+              },
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pushNamed(
+                      context,
+                      '/surah_detail',
+                      arguments: {'page': startP},
+                    );
+                  },
+                  icon: const Icon(Icons.menu_book, size: 18),
+                  label: const Text("الانتقال إلى المصحف"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.brown.shade50,
+                    foregroundColor: Colors.brown.shade800,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// بناء عنصر قائمة للمهمة اليومية
   Widget _buildTile(String title, String subtitle, String statusKey) {
     final isDone = dailyStatus[statusKey] ?? false;
     return Card(
       elevation: isDone ? 0 : 2,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       color: isDone ? Colors.green.withOpacity(0.05) : null,
       child: CheckboxListTile(
         title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
@@ -256,36 +431,40 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     );
   }
 
-  /// بناء أزرار التنقل بين الأيام
+  /// أزرار التنقل (اليوم السابق / اليوم التالي)
   Widget _buildNavigationButtons() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          ElevatedButton.icon(
-            onPressed: _lastDay,
-            icon: const Icon(Icons.chevron_left),
-            label: const Text("اليوم السابق"),
+          IconButton(
+            onPressed: currentDay > 1 ? _lastDay : null,
+            icon: const Icon(Icons.arrow_back_ios),
+            tooltip: "اليوم السابق",
           ),
-          ElevatedButton.icon(
-            onPressed: _nextDay,
-            icon: const Icon(Icons.chevron_right),
-            label: const Text("اليوم التالي"),
+          Text(
+            "اليوم $currentDay",
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          IconButton(
+            onPressed: currentDay < 604 ? _nextDay : null,
+            icon: const Icon(Icons.arrow_forward_ios),
+            tooltip: "اليوم التالي",
           ),
         ],
       ),
     );
   }
 
-  /// إظهار حوار تأكيد إعادة الضبط
+  /// حوار إعادة الضبط
   void _showResetDialog() {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text("إعادة ضبط البرنامج"),
         content: const Text(
-          "هل أنت متأكد من رغبتك في مسح كل التقدم والبدء من جديد؟",
+          "هل أنت متأكد من رغبتك في حذف كل التقدم والبدء من جديد؟",
         ),
         actions: [
           TextButton(
@@ -296,158 +475,16 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
             onPressed: () async {
               await AppStorage.reset();
               if (mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const RootDecider()),
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  '/setup',
                   (route) => false,
                 );
               }
             },
-            child: const Text(
-              "تأكيد المسح",
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text("إعادة ضبط", style: TextStyle(color: Colors.red)),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// --- صفحة الإحصائيات (Statistics Page) ---
-
-class HsoonStatsPage extends StatelessWidget {
-  const HsoonStatsPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("إحصائيات الختم")),
-      body: FutureBuilder<Map<String, int>>(
-        future: _loadAllStats(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final stats = snapshot.data!;
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _buildStatCard("📖 القراءة", stats['reading'] ?? 0, 15, "جزء"),
-              _buildStatCard("🎧 الاستماع", stats['listening'] ?? 0, 60, "حزب"),
-              _buildStatCard(
-                "📅 التحضير الأسبوعي",
-                stats['weekly'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard(
-                "🌙 التحضير الليلي",
-                stats['night'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard(
-                "⏳ التحضير القبلي",
-                stats['qabliy'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard("📝 الحفظ الجديد", stats['new'] ?? 0, 604, "صفحة"),
-              _buildStatCard(
-                "🔁 مراجعة القريب",
-                stats['near'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard(
-                "📦 مراجعة البعيد (1)",
-                stats['far'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard(
-                "📦 مراجعة البعيد (2)",
-                stats['far_overflow'] ?? 0,
-                604,
-                "صفحة",
-              ),
-              _buildStatCard(
-                "📦 مراجعة البعيد (3)",
-                stats['far_second_overflow'] ?? 0,
-                604,
-                "صفحة",
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Future<Map<String, int>> _loadAllStats() async {
-    Map<String, int> stats = {};
-    final keys = [
-      'reading',
-      'listening',
-      'weekly',
-      'night',
-      'qabliy',
-      'new',
-      'near',
-      'far',
-      'far_overflow',
-      'far_second_overflow',
-    ];
-    for (var key in keys) {
-      stats[key] = await AppStorage.getStats(key);
-    }
-    return stats;
-  }
-
-  Widget _buildStatCard(String title, int count, int cycle, String unit) {
-    final completions = count ~/ cycle;
-    final progress = (count % cycle) / cycle;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  "عدد الختمات: $completions",
-                  style: const TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.grey[200],
-              color: Colors.green,
-              minHeight: 10,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "التقدم الحالي: $count / $cycle ($unit)",
-              style: const TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -464,19 +501,6 @@ class HsoonDaysIndexPage extends StatefulWidget {
 
 class _HsoonDaysIndexPageState extends State<HsoonDaysIndexPage>
     with SingleTickerProviderStateMixin {
-  static const taskKeys = [
-    'reading',
-    'listening',
-    'weekly',
-    'night',
-    'qabliy',
-    'new',
-    'near',
-    'far',
-    'far_overflow',
-    'far_second_overflow',
-  ];
-
   late TabController _tabController;
   DateTime? startDate;
 
@@ -598,6 +622,154 @@ class _HsoonDaysIndexPageState extends State<HsoonDaysIndexPage>
         trailing: Icon(
           isDone ? Icons.check_circle : Icons.chevron_right,
           color: isDone ? Colors.green : Colors.grey,
+        ),
+      ),
+    );
+  }
+}
+
+// --- صفحة الإحصائيات (Stats Page) ---
+
+class HsoonStatsPage extends StatelessWidget {
+  const HsoonStatsPage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("إحصائيات الختم")),
+      body: FutureBuilder<Map<String, int>>(
+        future: _loadAllStats(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final stats = snapshot.data!;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildStatCard("📖 القراءة", stats['reading'] ?? 0, 604, "جزء"),
+              _buildStatCard(
+                "🎧 الاستماع",
+                stats['listening'] ?? 0,
+                604,
+                "حزب",
+              ),
+              _buildStatCard(
+                "📅 التحضير الأسبوعي",
+                stats['weekly'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard(
+                "🌙 التحضير الليلي",
+                stats['night'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard(
+                "⏳ التحضير القبلي",
+                stats['qabliy'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard("📝 الحفظ الجديد", stats['new'] ?? 0, 604, "صفحة"),
+              _buildStatCard(
+                "🔁 مراجعة القريب",
+                stats['near'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard(
+                "📦 مراجعة البعيد (1)",
+                stats['far'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard(
+                "📦 (الثاني) مراجعة البعيد",
+                stats['far_overflow'] ?? 0,
+                604,
+                "صفحة",
+              ),
+              _buildStatCard(
+                "📦 (الثالث) مراجعة البعيد",
+                stats['far_second_overflow'] ?? 0,
+                604,
+                "صفحة",
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<Map<String, int>> _loadAllStats() async {
+    final keys = [
+      'reading',
+      'listening',
+      'weekly',
+      'night',
+      'qabliy',
+      'new',
+      'near',
+      'far',
+      'far_overflow',
+      'far_second_overflow',
+    ];
+    final stats = <String, int>{};
+    await Future.wait(
+      keys.map((key) async {
+        stats[key] = await AppStorage.getStats(key);
+      }),
+    );
+    return stats;
+  }
+
+  Widget _buildStatCard(String title, int count, int cycle, String unit) {
+    final completions = count ~/ cycle;
+    final progress = (count % cycle) / cycle;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  "عدد الإنجازات: $completions",
+                  style: const TextStyle(
+                    color: Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.grey[200],
+              color: Colors.green,
+              minHeight: 10,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "التقدم الحالي: $count / $cycle ($unit)",
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
         ),
       ),
     );

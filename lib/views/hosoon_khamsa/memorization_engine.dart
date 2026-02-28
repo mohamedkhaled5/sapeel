@@ -14,27 +14,36 @@ class MemorizationEngine {
 
   int? get newPage {
     if (dayNumber < 8) return null;
-    return startPage + (dayNumber - 8);
+    int page = startPage + (dayNumber - 8);
+    return page > 604 ? 604 : page;
   }
 
   int? get qabliy => newPage;
 
   int? get nightPrep {
     if (dayNumber < 7) return null;
-    return startPage + (dayNumber - 7);
+    int page = startPage + (dayNumber - 7);
+    return page > 604 ? 604 : page;
   }
 
   Map<String, int> get weeklyPrep {
-    final start = startPage + (weekIndex * 7);
-    return {"start": start, "end": start + 6};
+    int start = startPage + (weekIndex * 7);
+    if (start > 604) start = 604;
+    int end = start + 6;
+    if (end > 604) end = 604;
+    return {"start": start, "end": end};
   }
 
   Map<String, int>? get nearReview {
     if (newPage == null) return null;
 
-    final start = (newPage! - 20 < startPage) ? startPage : newPage! - 20;
+    int start = (newPage! - 20 < startPage) ? startPage : newPage! - 20;
+    if (start < 1) start = 1;
 
-    return {"start": start, "end": newPage! - 1};
+    int end = newPage! - 1;
+    if (end < start) return null;
+
+    return {"start": start, "end": end};
   }
 
   int get readingJuz => (((dayNumber - 1) * 2) % 30) + 1;

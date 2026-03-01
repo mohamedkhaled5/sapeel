@@ -11,8 +11,6 @@ class StartSetupScreen extends StatefulWidget {
 
 class _StartSetupScreenState extends State<StartSetupScreen> {
   final controller = TextEditingController();
-  int selectedFarSize = 40;
-  bool weeklyBreakEnabled = false;
   DateTime selectedDate = DateTime.now();
   bool isSaving = false;
 
@@ -81,8 +79,8 @@ class _StartSetupScreenState extends State<StartSetupScreen> {
     try {
       debugPrint("Saving setup data...");
       await AppStorage.saveStartPage(page);
-      await AppStorage.saveFarBlockSize(selectedFarSize);
-      await AppStorage.saveWeeklyBreakEnabled(weeklyBreakEnabled);
+      await AppStorage.saveFarBlockSize(40); // القيمة ثابتة 40 دائماً
+      await AppStorage.saveWeeklyBreakEnabled(true); // مفعل دائماً
       await AppStorage.saveStartDate(selectedDate);
       await AppStorage.saveDay(1);
 
@@ -127,59 +125,6 @@ class _StartSetupScreenState extends State<StartSetupScreen> {
                 hintText: "مثلاً: 1",
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.menu_book),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // مراجعة البعيد
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: Colors.grey.shade300),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text("حجم مراجعة البعيد: "),
-                        DropdownButton<int>(
-                          value: selectedFarSize,
-                          items: const [
-                            DropdownMenuItem(value: 40, child: Text("40 صفحة")),
-                            DropdownMenuItem(value: 20, child: Text("20 صفحة")),
-                          ],
-                          onChanged: isSaving
-                              ? null
-                              : (value) {
-                                  setState(() {
-                                    selectedFarSize = value!;
-                                  });
-                                },
-                        ),
-                      ],
-                    ),
-                    const Divider(),
-                    SwitchListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text(
-                        "إيقاف مراجعة البعيد لباقي الأسبوع بعد الانتهاء",
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      value: weeklyBreakEnabled,
-                      onChanged: isSaving
-                          ? null
-                          : (val) {
-                              setState(() {
-                                weeklyBreakEnabled = val;
-                              });
-                            },
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 20),

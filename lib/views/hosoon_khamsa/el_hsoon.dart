@@ -61,19 +61,14 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
       final savedStartPage = await AppStorage.getStartPage();
       if (savedStartPage != null) {
         startPage = savedStartPage;
-        final startDate = await AppStorage.getStartDate();
-        if (startDate != null) {
-          // حساب اليوم الحالي بناءً على تاريخ البدء
-          final now = DateTime.now();
-          final difference = now.difference(startDate).inDays;
-          currentDay = difference + 1;
-          if (currentDay < 1) currentDay = 1;
-          if (currentDay > 604) currentDay = 604;
-          // حفظ اليوم المحسوب
-          await AppStorage.saveDay(currentDay);
-        } else {
-          currentDay = await AppStorage.getDay();
-        }
+
+        // الاعتماد كلياً على اليوم المخزن يدوياً
+        // لا يوجد تغيير تلقائي بناءً على التاريخ، التغيير يتم فقط عبر أزرار التنقل أو الفهرس
+        currentDay = await AppStorage.getDay();
+
+        if (currentDay < 1) currentDay = 1;
+        if (currentDay > 604) currentDay = 604;
+
         farBlockSize = await AppStorage.getFarBlockSize();
         weeklyBreakEnabled = await AppStorage.getWeeklyBreakEnabled();
         dailyStatus = await AppStorage.getDailyStatus(currentDay);
@@ -166,9 +161,12 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                 MaterialPageRoute(builder: (_) => const HsoonDaysIndexPage()),
               );
               if (selectedDay != null) {
+                // تحديث اليوم وحفظه
                 currentDay = selectedDay;
                 await AppStorage.saveDay(currentDay);
-                _loadProgress();
+                // إعادة تحميل بيانات اليوم الجديد
+                dailyStatus = await AppStorage.getDailyStatus(currentDay);
+                if (mounted) setState(() {});
               }
             },
           ),
@@ -188,11 +186,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
               child: ListView(
                 children: [
                   _buildReadingTile(engine),
-                  _buildTile(
-                    "🎧 الاستماع",
-                    "حزب ${engine.listeningHizb}",
-                    "listening",
-                  ),
+                  _buildListeningTile(engine),
                   const Divider(height: 32),
                   _buildEnhancedTile(
                     "📅 التحضير الأسبوعي",
@@ -287,6 +281,51 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     );
   }
 
+  /// بناء عنصر قائمة خاص بمهمة الاستماع (حزب يومياً) مع زر الانتقال
+  Widget _buildListeningTile(MemorizationEngine engine) {
+    final h = engine.listeningHizb;
+    final juzIndex = (h - 1) ~/ 2;
+    final isSecondHizb = (h - 1) % 2 == 1;
+
+    final startP_juz = QuranMetadata.juzStartPages[juzIndex];
+    int startP;
+
+    if (!isSecondHizb) {
+      startP = startP_juz;
+    } else {
+      // الحزب الثاني من الجزء
+      final nextJuzStart = (juzIndex + 1 < 30)
+          ? QuranMetadata.juzStartPages[juzIndex + 1]
+          : 605;
+      startP = (startP_juz + nextJuzStart) ~/ 2;
+    }
+
+    // نهاية الحزب
+    int endP;
+    if (!isSecondHizb) {
+      final nextJuzStart = (juzIndex + 1 < 30)
+          ? QuranMetadata.juzStartPages[juzIndex + 1]
+          : 605;
+      endP = ((startP_juz + nextJuzStart) ~/ 2) - 1;
+    } else {
+      final nextJuzStart = (juzIndex + 1 < 30)
+          ? QuranMetadata.juzStartPages[juzIndex + 1]
+          : 605;
+      endP = nextJuzStart - 1;
+    }
+
+    if (endP > 604) endP = 604;
+    if (startP > 604) startP = 604;
+
+    return _buildEnhancedTile(
+      "🎧 الاستماع",
+      startP,
+      endP,
+      "listening",
+      customSubtitle: "حزب $h",
+    );
+  }
+
   /// بناء عنصر قائمة محسّن ببيانات السور والآيات وزر الانتقال
   Widget _buildEnhancedTile(
     String title,
@@ -314,9 +353,34 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
           children: [
             CheckboxListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              title: Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+              title: Row(
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (customSubtitle != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.brown.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        customSubtitle,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.brown.shade900,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               subtitle: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -406,31 +470,6 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     );
   }
 
-  /// بناء عنصر قائمة للمهمة اليومية
-  Widget _buildTile(String title, String subtitle, String statusKey) {
-    final isDone = dailyStatus[statusKey] ?? false;
-    return Card(
-      elevation: isDone ? 0 : 2,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      color: isDone ? Colors.green.withOpacity(0.05) : null,
-      child: CheckboxListTile(
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-        subtitle: Text(subtitle),
-        value: isDone,
-        onChanged: (val) async {
-          if (val == true) {
-            await AppStorage.incrementStats(statusKey);
-          } else {
-            await AppStorage.decrementStats(statusKey);
-          }
-          setState(() => dailyStatus[statusKey] = val!);
-          await AppStorage.saveDailyStatus(currentDay, dailyStatus);
-        },
-      ),
-    );
-  }
-
   /// أزرار التنقل (اليوم السابق / اليوم التالي)
   Widget _buildNavigationButtons() {
     return Padding(
@@ -439,18 +478,18 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            onPressed: currentDay > 1 ? _lastDay : null,
-            icon: const Icon(Icons.arrow_back_ios),
-            tooltip: "اليوم السابق",
+            onPressed: currentDay < 604 ? _nextDay : null,
+            icon: const Icon(Icons.arrow_forward_ios),
+            tooltip: "اليوم التالي",
           ),
           Text(
             "اليوم $currentDay",
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           IconButton(
-            onPressed: currentDay < 604 ? _nextDay : null,
-            icon: const Icon(Icons.arrow_forward_ios),
-            tooltip: "اليوم التالي",
+            onPressed: currentDay > 1 ? _lastDay : null,
+            icon: const Icon(Icons.arrow_back_ios),
+            tooltip: "اليوم السابق",
           ),
         ],
       ),

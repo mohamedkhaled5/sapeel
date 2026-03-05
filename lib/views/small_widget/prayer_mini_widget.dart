@@ -45,7 +45,7 @@ class _PrayerMiniWidgetState extends State<PrayerMiniWidget> {
           _prayerTimes = times;
           _countdown = PrayerService.getCountdown(times);
         });
-        
+
         // جدولة الإشعارات والعداد في الخلفية
         await AdhanNotificationService.schedulePrayerNotifications(times);
       }
@@ -77,21 +77,25 @@ class _PrayerMiniWidgetState extends State<PrayerMiniWidget> {
   Widget build(BuildContext context) {
     if (_prayerTimes == null) return const SizedBox.shrink();
 
-    final nextPrayer = _prayerTimes!.nextPrayer();
-    final nextPrayerTime = _prayerTimes!.timeForPrayer(nextPrayer);
+    final nextData = PrayerService.getNextPrayerAndTime(_prayerTimes!);
+    final nextPrayer = nextData["prayer"] as Prayer;
+    final nextPrayerTime = nextData["time"] as DateTime?;
 
     // إذا لم يتوفر وقت للصلاة القادمة (حالة نادرة)، لا نعرض الويدجت
     if (nextPrayerTime == null) return const SizedBox.shrink();
 
-    const color = Color(0xFF1B5E20);
+    final color = Theme.of(context).primaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(
+          color: isDark ? color.withOpacity(0.3) : color.withOpacity(0.1),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -106,7 +110,7 @@ class _PrayerMiniWidgetState extends State<PrayerMiniWidget> {
               const SizedBox(height: 4),
               Text(
                 DateFormat.jm('ar').format(nextPrayerTime),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                   color: color,

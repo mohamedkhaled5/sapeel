@@ -32,10 +32,12 @@ dependencies:
   timezone: ^0.9.4
   flutter_timezone: ^3.0.1
   quran: ^1.4.1
+  
 
   webview_flutter: ^4.13.1
   palette_generator: ^0.3.3+7
   cached_network_image: ^3.4.1
+  share_plus: ^12.0.1
 
 dev_dependencies:
   flutter_test:
@@ -52,7 +54,8 @@ flutter:
     - assets/icons/radio.svg
     - assets/icons/sapeel.png
     - assets/data/quran.json
-
+    - assets/svg/islamic_pattern.svg
+    - assets/svg/islamic_pattern1.jpg
   fonts:
     - family: Amiri
       fonts:

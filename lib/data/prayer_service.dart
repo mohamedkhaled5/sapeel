@@ -94,12 +94,45 @@ class PrayerService {
     );
   }
 
+  /// الحصول على الصلاة القادمة ووقتها بشكل صحيح (تجاوز الصلاة إذا بدأت)
+  static Map<String, dynamic> getNextPrayerAndTime(PrayerTimes prayerTimes) {
+    var nextPrayer = prayerTimes.nextPrayer();
+    var nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+    final now = DateTime.now();
+
+    // إذا كان وقت الصلاة القادمة قد مر (وقت الأذان الآن)، ننتقل للصلاة التالية
+    if (nextPrayerTime != null && now.isAfter(nextPrayerTime)) {
+      final allPrayers = [
+        Prayer.fajr,
+        Prayer.sunrise,
+        Prayer.dhuhr,
+        Prayer.asr,
+        Prayer.maghrib,
+        Prayer.isha,
+        Prayer.none
+      ];
+      final currentIndex = allPrayers.indexOf(nextPrayer);
+      if (currentIndex != -1 && currentIndex < allPrayers.length - 1) {
+        nextPrayer = allPrayers[currentIndex + 1];
+        nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+      }
+    }
+
+    // إذا لم نجد صلاة قادمة لليوم (بعد العشاء)، نتركها كما هي (سيتم تحديثها غداً)
+    return {
+      "prayer": nextPrayer,
+      "time": nextPrayerTime,
+    };
+  }
+
   /// تحديد الصلاة القادمة والعد التنازلي
   static Duration getCountdown(PrayerTimes prayerTimes) {
-    final nextPrayer = prayerTimes.nextPrayer();
-    final nextPrayerTime = prayerTimes.timeForPrayer(nextPrayer);
+    final nextData = getNextPrayerAndTime(prayerTimes);
+    final DateTime? nextPrayerTime = nextData["time"];
+
     if (nextPrayerTime == null) return Duration.zero;
-    return nextPrayerTime.difference(DateTime.now());
+    final diff = nextPrayerTime.difference(DateTime.now());
+    return diff.isNegative ? Duration.zero : diff;
   }
 
   /// التأكد من صلاحيات الموقع

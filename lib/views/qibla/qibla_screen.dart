@@ -75,10 +75,11 @@ class _QiblaScreenState extends State<QiblaScreen>
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF1B5E20);
+    final primaryColor = Theme.of(context).primaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
       appBar: AppBar(
         title: const Text(
           "تحديد القبلة",
@@ -202,13 +203,17 @@ class _QiblaScreenState extends State<QiblaScreen>
   }
 
   Widget _buildLocationInfo(Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       margin: const EdgeInsets.symmetric(horizontal: 25),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: isDark ? color.withOpacity(0.15) : color.withOpacity(0.05),
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(
+          color: isDark ? color.withOpacity(0.3) : color.withOpacity(0.1),
+        ),
       ),
       child: Column(
         children: [

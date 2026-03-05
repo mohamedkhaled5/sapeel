@@ -93,10 +93,11 @@ class _PrayerScreenState extends State<PrayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    const primaryColor = Color(0xFF1B5E20);
+    final primaryColor = Theme.of(context).primaryColor;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF0A0A0A) : Colors.white,
       appBar: AppBar(
         title: const Text(
           "مواقيت الصلاة",
@@ -114,7 +115,7 @@ class _PrayerScreenState extends State<PrayerScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: primaryColor))
+          ? Center(child: CircularProgressIndicator(color: primaryColor))
           : _errorMessage != null
           ? _buildErrorState()
           : _buildMainUI(primaryColor),
@@ -263,14 +264,22 @@ class _PrayerScreenState extends State<PrayerScreen> {
   }
 
   Widget _prayerTile(String name, DateTime time, bool isCurrent, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
       decoration: BoxDecoration(
-        color: isCurrent ? color.withOpacity(0.08) : Colors.white,
+        color: isCurrent
+            ? color.withOpacity(0.08)
+            : (isDark ? Colors.white.withOpacity(0.05) : Colors.white),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isCurrent ? color : Colors.grey.withOpacity(0.1),
+          color: isCurrent
+              ? color
+              : (isDark
+                    ? Colors.white.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1)),
           width: isCurrent ? 2 : 1,
         ),
         boxShadow: [
@@ -295,7 +304,9 @@ class _PrayerScreenState extends State<PrayerScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-                  color: isCurrent ? color : Colors.black87,
+                  color: isCurrent
+                      ? color
+                      : (isDark ? Colors.white70 : Colors.black87),
                 ),
               ),
             ],
@@ -305,7 +316,9 @@ class _PrayerScreenState extends State<PrayerScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
-              color: isCurrent ? color : Colors.black54,
+              color: isCurrent
+                  ? color
+                  : (isDark ? Colors.white54 : Colors.black54),
             ),
           ),
         ],

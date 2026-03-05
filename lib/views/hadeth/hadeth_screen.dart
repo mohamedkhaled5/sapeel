@@ -1,8 +1,7 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
-import 'data/models/common_models.dart';
-import 'data/models/hadith_models.dart';
-import 'data/repositories/hadith_repository.dart';
+import 'package:sapeel/views/hadeth/data/models/category_model.dart';
+import 'package:sapeel/views/hadeth/data/services/hadeeth_api_service.dart';
+import 'package:sapeel/views/hadeth/data/models/hadeeth_list_item.dart';
 
 class HadeethScreen extends StatefulWidget {
   const HadeethScreen({super.key});
@@ -12,358 +11,239 @@ class HadeethScreen extends StatefulWidget {
 }
 
 class _HadeethScreenState extends State<HadeethScreen> {
+  final HadeethApiService _apiService = HadeethApiService();
+  late Future<List<CategoryModel>> futureCategories;
+  List<CategoryModel> _allCategories = [];
+  List<CategoryModel> _filteredCategories = [];
+
+  // 🔍 Global Search Variables
+  List<HadeethListItem> _allHadeeths = [];
+  List<HadeethListItem> _filteredHadeeths = [];
+  bool _isLoadingHadeeths = false;
+
   final TextEditingController _searchController = TextEditingController();
-  final HadithRepository _repository = HadithRepository();
-  final ScrollController _scrollController = ScrollController();
-
-  List<APIHadithItem> _results = [];
-  Metadata? _metadata;
-  bool _isLoading = false;
-  bool _isLoadingMore = false;
-  String? _errorMessage;
-  int _currentPage = 1;
-  Timer? _debounce;
-  String _lastSearchQuery = '';
-  String _selectedCategory = 'الصلاة';
-
-  final List<String> _categories = [
-    'الصلاة',
-    'الزكاة',
-    'الصوم',
-    'الحج',
-    'الأدب',
-    'الجهاد',
-    'الفتن',
-    'القيامة',
-    'الجنة',
-    'النار',
-  ];
+  bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_onScroll);
-    // جلب أحاديث افتراضية عند فتح الصفحة
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startNewSearch(_selectedCategory);
+    _loadCategories();
+  }
+
+  void _loadCategories() {
+    futureCategories = _apiService.fetchCategories("ar").then((categories) {
+      setState(() {
+        _allCategories = categories;
+        _filteredCategories = categories;
+      });
+      _preloadAllHadeeths(categories);
+      return categories;
+    });
+  }
+
+  /// 🚀 Preload all hadeeths from all categories for global search
+  Future<void> _preloadAllHadeeths(List<CategoryModel> categories) async {
+    setState(() => _isLoadingHadeeths = true);
+    try {
+      // Fetch only from root categories to avoid too many requests
+      final rootCategories = categories
+          .where((c) => c.parentId == null)
+          .toList();
+
+      final List<Future<List<HadeethListItem>>> futures = rootCategories.map((
+        category,
+      ) {
+        return _apiService.fetchHadeethList(
+          language: "ar",
+          categoryId: category.id,
+        );
+      }).toList();
+
+      final List<List<HadeethListItem>> results = await Future.wait(futures);
+
+      if (mounted) {
+        setState(() {
+          _allHadeeths = results.expand((x) => x).toList();
+          _isLoadingHadeeths = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingHadeeths = false);
+      debugPrint("Error preloading hadeeths: $e");
+    }
+  }
+
+  void _filterResults(String query) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredCategories = _allCategories;
+        _filteredHadeeths = [];
+      } else {
+        // Filter Categories
+        _filteredCategories = _allCategories
+            .where(
+              (category) =>
+                  category.title.toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
+
+        // Filter Hadeeths (Global Search)
+        _filteredHadeeths = _allHadeeths
+            .where(
+              (hadeeth) =>
+                  hadeeth.title.toLowerCase().contains(query.toLowerCase()),
+            )
+            .toList();
+      }
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
-    _debounce?.cancel();
     super.dispose();
-  }
-
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent * 0.9 &&
-        !_isLoadingMore &&
-        _metadata?.hasNextPage == true) {
-      _loadMore();
-    }
-  }
-
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 700), () {
-      final trimmed = query.trim();
-      if (trimmed.length >= 2 && trimmed != _lastSearchQuery) {
-        _startNewSearch(trimmed);
-      } else if (trimmed.isEmpty) {
-        setState(() {
-          _results = [];
-          _metadata = null;
-          _lastSearchQuery = '';
-        });
-      }
-    });
-  }
-
-  Future<void> _startNewSearch(String query) async {
-    if (query.isEmpty) return;
-
-    setState(() {
-      _isLoading = true;
-      _results = [];
-      _currentPage = 1;
-      _errorMessage = null;
-      _lastSearchQuery = query;
-    });
-
-    try {
-      final response = await _repository.searchApiHadith(
-        value: query,
-        page: _currentPage,
-      );
-      if (mounted) {
-        setState(() {
-          _results = response.data;
-          _metadata = response.metadata;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _errorMessage = e
-              .toString()
-              .replaceFirst('Exception: ', '')
-              .replaceFirst('DorarApiException: ', '');
-        });
-      }
-    }
-  }
-
-  void _onCategorySelected(String category) {
-    if (_selectedCategory == category) return;
-    setState(() {
-      _selectedCategory = category;
-      _searchController.text = ''; // مسح نص البحث عند اختيار تصنيف
-    });
-    _startNewSearch(category);
-  }
-
-  Future<void> _loadMore() async {
-    if (_isLoadingMore || _metadata?.hasNextPage != true) return;
-
-    setState(() {
-      _isLoadingMore = true;
-    });
-
-    try {
-      final nextPage = _currentPage + 1;
-      final response = await _repository.searchApiHadith(
-        value: _lastSearchQuery,
-        page: nextPage,
-      );
-
-      if (mounted) {
-        setState(() {
-          _currentPage = nextPage;
-          _results.addAll(response.data);
-          _metadata = response.metadata;
-          _isLoadingMore = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoadingMore = false);
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('الموسوعة الحديثية (Clean Arch)'),
-        centerTitle: true,
-        backgroundColor: Colors.green[800],
-        foregroundColor: Colors.white,
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
+        title: _isSearching
+            ? TextField(
                 controller: _searchController,
-                onChanged: _onSearchChanged,
-                onSubmitted: (v) => _startNewSearch(v.trim()),
-                decoration: InputDecoration(
-                  hintText: 'ابحث عن حديث (مثال: الصلاة)',
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: _searchController.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            _searchController.clear();
-                            _onSearchChanged('');
-                          },
-                        )
-                      : null,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                autofocus: true,
+                decoration: const InputDecoration(
+                  hintText: "بحث في الأقسام والأحاديث...",
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.white70),
+                ),
+                style: const TextStyle(color: Colors.white, fontSize: 18),
+                onChanged: _filterResults,
+              )
+            : const Text("الأحاديث النبوية"),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(_isSearching ? Icons.close : Icons.search),
+            onPressed: () {
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchController.clear();
+                  _filteredCategories = _allCategories;
+                  _filteredHadeeths = [];
+                } else {
+                  _isSearching = true;
+                }
+              });
+            },
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<CategoryModel>>(
+        future: futureCategories,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              _allCategories.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError && _allCategories.isEmpty) {
+            return Center(child: Text("حدث خطأ: ${snapshot.error}"));
+          }
+
+          if (_allCategories.isEmpty && !snapshot.hasData) {
+            return const Center(child: Text("لا توجد بيانات"));
+          }
+
+          if (_isSearching &&
+              _filteredCategories.isEmpty &&
+              _filteredHadeeths.isEmpty) {
+            return const Center(child: Text("لا توجد نتائج للبحث"));
+          }
+
+          return ListView(
+            children: [
+              // 📁 Sections (Categories)
+              if (_filteredCategories.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    "الأقسام",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              // عرض التصنيفات بشكل أفقي
-              SizedBox(
-                height: 40,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  itemBuilder: (context, index) {
-                    final category = _categories[index];
-                    final isSelected = _selectedCategory == category;
-                    return Padding(
-                      padding: const EdgeInsets.only(left: 8.0),
-                      child: FilterChip(
-                        label: Text(category),
-                        selected: isSelected,
-                        onSelected: (_) => _onCategorySelected(category),
-                        selectedColor: Colors.green[100],
-                        checkmarkColor: Colors.green[800],
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? Colors.green[800]
-                              : Colors.black87,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
+                ..._filteredCategories.map(
+                  (category) => Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        category.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                    );
-                  },
+                      subtitle: Text("عدد الأحاديث: ${category.hadeethCount}"),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/hadeth_list',
+                          arguments: {
+                            'id': category.id,
+                            'title': category.title,
+                          },
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (_isLoading)
-                const LinearProgressIndicator(color: Colors.green)
-              else if (_errorMessage != null)
-                _buildErrorState()
-              else
-                Expanded(child: _buildHadethList()),
+              ],
+
+              // 📜 Hadeeths (Global Search Results)
+              if (_isSearching && _filteredHadeeths.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    "الأحاديث",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ..._filteredHadeeths.map(
+                  (hadeeth) => Card(
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        hadeeth.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      trailing: const Icon(Icons.arrow_forward_ios),
+                      onTap: () {
+                        Navigator.pushNamed(
+                          context,
+                          '/hadeth_detail',
+                          arguments: hadeeth.id,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+
+              if (_isSearching && _isLoadingHadeeths)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState() {
-    return Column(
-      children: [
-        Text(
-          _errorMessage!,
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 10),
-        ElevatedButton(
-          onPressed: () => _startNewSearch(_lastSearchQuery),
-          child: const Text('إعادة المحاولة'),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHadethList() {
-    if (_results.isEmpty && _lastSearchQuery.isNotEmpty && !_isLoading) {
-      return const Center(child: Text('لا توجد نتائج مطابقة لبحثك'));
-    }
-    return ListView.builder(
-      controller: _scrollController,
-      itemCount: _results.length + (_isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == _results.length) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: CircularProgressIndicator()),
           );
-        }
-        return _buildHadethCard(_results[index]);
-      },
-    );
-  }
-
-  Widget _buildHadethCard(APIHadithItem item) {
-    final isSahih = item.grade.contains('صحيح') || item.grade.contains('حسن');
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(15),
-        side: BorderSide(
-          color: isSahih ? Colors.green[200]! : Colors.red[200]!,
-          width: 1,
-        ),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              item.hadith,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                height: 1.6,
-                color: Colors.green[900],
-                fontFamily: 'Amiri',
-              ),
-            ),
-            const Divider(height: 24),
-            _buildInfoRow(Icons.person, 'الراوي', item.rawi),
-            _buildInfoRow(Icons.history_edu, 'المحدث', item.mohdith),
-            _buildInfoRow(Icons.book, 'المصدر', item.book),
-            _buildInfoRow(Icons.tag, 'رقم الصفحة', item.numberOrPage),
-            const SizedBox(height: 12),
-            _buildGradeBadge(item.grade, isSahih),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGradeBadge(String grade, bool isSahih) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSahih ? Colors.green[50] : Colors.red[50],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            isSahih ? Icons.check_circle : Icons.error,
-            size: 18,
-            color: isSahih ? Colors.green[700] : Colors.red[700],
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'الدرجة: $grade',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isSahih ? Colors.green[800] : Colors.red[800],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    if (value.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, size: 16, color: Colors.green[700]),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 14, color: Colors.grey[800]),
-            ),
-          ),
-        ],
+        },
       ),
     );
   }

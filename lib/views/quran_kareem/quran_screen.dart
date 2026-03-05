@@ -147,7 +147,7 @@ class _QuranScreenState extends State<QuranScreen> {
                   ),
                   // رقم السورة في دائرة
                   trailing: CircleAvatar(
-                    backgroundColor: const Color(0xFF1B5E20).withOpacity(0.1),
+                    backgroundColor: Color(0xFF1B5E20).withOpacity(0.1),
                     child: Text(
                       surah.number.toString(),
                       style: const TextStyle(

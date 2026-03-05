@@ -33,8 +33,7 @@ Widget buildCategoryGrid(BuildContext context) {
       'route': '/qibla',
     },
     {
-      'title':
-          'المكتبه الإسلامية,هذه مجموعه من المواقع لم يتم انشاء مكتبه خاص بالتطبيق بعد',
+      'title': 'المكتبه الإسلامية,نسخه تجريبيه',
       'icon': Icons.library_books,
       'color': Colors.teal,
       'route': '/islamic_library',

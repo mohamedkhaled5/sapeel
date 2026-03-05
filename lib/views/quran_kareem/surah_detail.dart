@@ -93,72 +93,90 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<SurahDetail>(
-      future: surahFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (snapshot.hasError || !snapshot.hasData) {
-          return Scaffold(
-            appBar: AppBar(title: const Text("خطأ")),
-            body: Center(child: Text("فشل في تحميل السورة: ${snapshot.error}")),
-          );
-        }
-
-        final surah = snapshot.data!;
-
-        // إعداد البيانات الأولية عند تحميل السورة لأول مرة (فقط إذا لم يتم تمرير صفحة بداية)
-        if (currentSurahName.isEmpty) {
-          if (widget.initialPage == null) {
-            currentPage = surah.ayahs.first["page"];
-            _pageController = PageController(initialPage: currentPage - 1);
+    return Theme(
+      data: ThemeData(
+        brightness: Brightness.light,
+        primaryColor: const Color(0xFF1B5E20),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1B5E20),
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1B5E20),
+          foregroundColor: Colors.white,
+          centerTitle: true,
+        ),
+        scaffoldBackgroundColor: Colors.white,
+      ),
+      child: FutureBuilder<SurahDetail>(
+        future: surahFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
-          currentJuz = QuranMetadata.getJuzByPage(currentPage);
-          currentSurahName = QuranMetadata.getSurahNameByPage(currentPage);
-        }
 
-        return Scaffold(
-          appBar: AppBar(
-            centerTitle: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                // العودة لصفحة الفهرس
-                Navigator.pop(context);
-              },
-            ),
-            title: Column(
-              children: [
-                Text(
-                  isTextMode ? surah.nameAr : currentSurahName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (!isTextMode)
+          if (snapshot.hasError || !snapshot.hasData) {
+            return Scaffold(
+              appBar: AppBar(title: const Text("خطأ")),
+              body: Center(
+                child: Text("فشل في تحميل السورة: ${snapshot.error}"),
+              ),
+            );
+          }
+
+          final surah = snapshot.data!;
+
+          // إعداد البيانات الأولية عند تحميل السورة لأول مرة (فقط إذا لم يتم تمرير صفحة بداية)
+          if (currentSurahName.isEmpty) {
+            if (widget.initialPage == null) {
+              currentPage = surah.ayahs.first["page"];
+              _pageController = PageController(initialPage: currentPage - 1);
+            }
+            currentJuz = QuranMetadata.getJuzByPage(currentPage);
+            currentSurahName = QuranMetadata.getSurahNameByPage(currentPage);
+          }
+
+          return Scaffold(
+            appBar: AppBar(
+              centerTitle: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  // العودة لصفحة الفهرس
+                  Navigator.pop(context);
+                },
+              ),
+              title: Column(
+                children: [
                   Text(
-                    "صفحة $currentPage | جزء $currentJuz",
-                    style: const TextStyle(fontSize: 12),
+                    isTextMode ? surah.nameAr : currentSurahName,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                  if (!isTextMode)
+                    Text(
+                      "صفحة $currentPage | جزء $currentJuz",
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                ],
+              ),
+              actions: [
+                // زر التبديل بين الصور والنص
+                IconButton(
+                  icon: Icon(isTextMode ? Icons.image : Icons.text_snippet),
+                  onPressed: () => setState(() => isTextMode = !isTextMode),
+                  tooltip: isTextMode ? "عرض الصور" : "عرض النص",
+                ),
               ],
             ),
-            actions: [
-              // زر التبديل بين الصور والنص
-              IconButton(
-                icon: Icon(isTextMode ? Icons.image : Icons.text_snippet),
-                onPressed: () => setState(() => isTextMode = !isTextMode),
-                tooltip: isTextMode ? "عرض الصور" : "عرض النص",
-              ),
-            ],
-          ),
-          body: isTextMode ? _buildTextView(surah) : _buildMushafView(),
-        );
-      },
+            body: isTextMode ? _buildTextView(surah) : _buildMushafView(),
+          );
+        },
+      ),
     );
   }
 
@@ -179,6 +197,7 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
               fontSize: 22,
               height: 1.8,
               fontFamily: 'Amiri',
+              color: Colors.black87,
             ),
           ),
         );

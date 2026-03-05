@@ -71,13 +71,14 @@ class _DynamicHeaderState extends State<DynamicHeader> {
   Widget build(BuildContext context) {
     final nextPrayer = _prayerTimes?.nextPrayer() ?? Prayer.none;
     final nextPrayerTime = _prayerTimes?.timeForPrayer(nextPrayer);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Color(0xFF1B5E20),
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF0F2D0F) : const Color(0xFF1B5E20),
+        borderRadius: const BorderRadius.only(
           bottomLeft: Radius.circular(32),
           bottomRight: Radius.circular(32),
         ),

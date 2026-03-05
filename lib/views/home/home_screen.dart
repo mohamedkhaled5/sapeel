@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:sapeel/main.dart'; // Import to access themeNotifier and themeService
 import 'package:sapeel/views/small_widget/verse_of_the_day.dart';
+import 'package:sapeel/views/small_widget/hadeeth_of_the_day.dart';
 import 'package:sapeel/views/small_widget/dynamic_header.dart';
 import 'package:sapeel/views/small_widget/category_grid.dart';
 import 'package:sapeel/views/small_widget/prayer_mini_widget.dart';
@@ -25,8 +27,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Color(0xFF1B5E20),
-
         title: const Text(
           'Sapeel',
           style: TextStyle(
@@ -35,6 +35,23 @@ class _HomeScreenState extends State<HomeScreen> {
             color: Colors.white,
           ),
         ),
+        actions: [
+          ValueListenableBuilder<ThemeMode>(
+            valueListenable: themeNotifier,
+            builder: (context, mode, child) {
+              return IconButton(
+                icon: Icon(
+                  mode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                  color: Colors.white,
+                ),
+                onPressed: () async {
+                  await themeService.toggleTheme();
+                  themeNotifier.value = themeService.themeMode;
+                },
+              );
+            },
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -46,7 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
             // شبكة التصنيفات (قرآن، حديث، إلخ)
             buildCategoryGrid(context),
             // آية اليوم
-            buildVerseOfTheDay(context),
+            const VerseOfTheDay(),
+            // حديث اليوم
+            const HadeethOfTheDay(),
+            const SizedBox(height: 20),
           ],
         ),
       ),

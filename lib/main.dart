@@ -71,10 +71,15 @@ class QuranApp extends StatelessWidget {
                   final args = settings.arguments as Map<String, dynamic>;
                   if (args.containsKey('page')) {
                     final page = args['page'] as int;
+                    final endPage = args['endPage'] as int?;
+                    final segmentLabel = args['segmentLabel'] as String?;
                     return MaterialPageRoute(
                       builder: (_) => SurahDetailScreen(
-                        surahNumber: 1, // سيتم تجاوزه بـ initialPage
+                        surahNumber: 1,
                         initialPage: page,
+                        segmentStartPage: page,
+                        segmentEndPage: endPage,
+                        segmentLabel: segmentLabel,
                       ),
                     );
                   }

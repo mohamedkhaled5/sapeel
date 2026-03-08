@@ -117,6 +117,49 @@ class AppStorage {
     return isFirst;
   }
 
+  // --- الهدف القريب (Near Goal) ---
+
+  static Future saveNearGoalPage(int? page) async {
+    final box = await _getBox();
+    if (page == null) {
+      await box.delete("nearGoalPage");
+    } else {
+      await box.put("nearGoalPage", page);
+    }
+  }
+
+  static Future<int?> getNearGoalPage() async {
+    final box = await _getBox();
+    return box.get("nearGoalPage");
+  }
+
+  static Future saveNearGoalReached(bool reached) async {
+    final box = await _getBox();
+    await box.put("nearGoalReached", reached);
+  }
+
+  static Future<bool> getNearGoalReached() async {
+    final box = await _getBox();
+    return box.get("nearGoalReached", defaultValue: false);
+  }
+
+  // --- تخطي اليوم (Carryover Mapping) ---
+
+  static Future setCarryOverForDay(int targetDay, int sourceDay) async {
+    final box = await _getBox();
+    await box.put("carryover_$targetDay", sourceDay);
+  }
+
+  static Future<int?> getCarryOverForDay(int day) async {
+    final box = await _getBox();
+    return box.get("carryover_$day");
+  }
+
+  static Future clearCarryOverForDay(int day) async {
+    final box = await _getBox();
+    await box.delete("carryover_$day");
+  }
+
   // --- الإحصائيات (Statistics) ---
 
   /// زيادة عداد الإكمال لفئة معينة

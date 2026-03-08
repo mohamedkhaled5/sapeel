@@ -4,16 +4,23 @@ import 'package:sapeel/data/quran_api.dart';
 import 'package:sapeel/data/mushaf_service.dart';
 import 'package:sapeel/model/surah_detail_model.dart';
 import 'package:sapeel/utils/quran_metadata.dart';
+import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 
 /// شاشة تفاصيل السورة: تدمج بين عرض المصحف (صور) وعرض الآيات (نص)
 class SurahDetailScreen extends StatefulWidget {
   final int surahNumber;
   final int? initialPage; // إضافة معامل اختياري لرقم الصفحة
+  final int? segmentStartPage;
+  final int? segmentEndPage;
+  final String? segmentLabel;
 
   const SurahDetailScreen({
     super.key,
     required this.surahNumber,
     this.initialPage,
+    this.segmentStartPage,
+    this.segmentEndPage,
+    this.segmentLabel,
   });
 
   @override
@@ -34,6 +41,8 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
   int currentPage = 1;
   int currentJuz = 1;
   String currentSurahName = "";
+  int? nearGoalPage;
+  bool nearGoalReached = false;
 
   @override
   void initState() {
@@ -50,6 +59,7 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
     }
 
     _checkMushafStatus();
+    _loadNearGoal();
   }
 
   /// التحقق من حالة تحميل المصحف
@@ -64,6 +74,17 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
     if (mounted) {
       setState(() {
         isLoadingMushaf = false;
+      });
+    }
+  }
+
+  Future<void> _loadNearGoal() async {
+    final goal = await AppStorage.getNearGoalPage();
+    final reached = await AppStorage.getNearGoalReached();
+    if (mounted) {
+      setState(() {
+        nearGoalPage = goal;
+        nearGoalReached = reached;
       });
     }
   }
@@ -164,6 +185,40 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
                     ),
                 ],
               ),
+              bottom: (widget.segmentStartPage != null)
+                  ? PreferredSize(
+                      preferredSize: const Size.fromHeight(36),
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            _buildChip("بداية", widget.segmentStartPage!),
+                            const SizedBox(width: 8),
+                            if (widget.segmentEndPage != null &&
+                                widget.segmentEndPage !=
+                                    widget.segmentStartPage)
+                              _buildChip("نهاية", widget.segmentEndPage!)
+                            else if (widget.segmentEndPage != null &&
+                                widget.segmentEndPage ==
+                                    widget.segmentStartPage)
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildChip("بداية", widget.segmentStartPage!),
+                                  const SizedBox(width: 8),
+                                  _buildChip("نهاية", widget.segmentEndPage!),
+                                ],
+                              ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : null,
               actions: [
                 // زر التبديل بين الصور والنص
                 IconButton(
@@ -176,6 +231,31 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
             body: isTextMode ? _buildTextView(surah) : _buildMushafView(),
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildChip(String label, int page) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white24),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            "صفحة $page",
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -262,18 +342,77 @@ class _SurahDetailScreenState extends State<SurahDetailScreen> {
             currentJuz = QuranMetadata.getJuzByPage(newPage);
             currentSurahName = QuranMetadata.getSurahNameByPage(newPage);
           });
+          if (nearGoalPage != null &&
+              newPage == nearGoalPage &&
+              !nearGoalReached) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text("أحسنت! وصلت إلى الهدف القريب: الصفحة $newPage"),
+              ),
+            );
+            nearGoalReached = true;
+            AppStorage.saveNearGoalReached(true);
+            setState(() {});
+          }
         },
         itemBuilder: (context, i) {
           final pageNum = (i + 1).toString().padLeft(3, '0');
-          return InteractiveViewer(
-            child: Image.file(
-              File("$mushafPath/$pageNum.png"),
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Center(child: Text("خطأ في عرض الصفحة")),
-            ),
+          final pageIndex = i + 1;
+          final isNearGoal = nearGoalPage != null && pageIndex == nearGoalPage;
+          final isStart =
+              widget.segmentStartPage != null &&
+              pageIndex == widget.segmentStartPage;
+          final isEnd =
+              widget.segmentEndPage != null &&
+              pageIndex == widget.segmentEndPage;
+
+          return Stack(
+            children: [
+              Container(
+                decoration: isNearGoal
+                    ? BoxDecoration(
+                        border: Border.all(color: Colors.amber, width: 4),
+                      )
+                    : null,
+                child: InteractiveViewer(
+                  child: Image.file(
+                    File("$mushafPath/$pageNum.png"),
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Center(child: Text("خطأ في عرض الصفحة")),
+                  ),
+                ),
+              ),
+              if (isStart || isEnd)
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isStart) _cornerBadge("بداية", Colors.green.shade700),
+                      if (isStart && isEnd) const SizedBox(width: 8),
+                      if (isEnd) _cornerBadge("نهاية", Colors.red.shade700),
+                    ],
+                  ),
+                ),
+            ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _cornerBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(color: Colors.white, fontSize: 12),
       ),
     );
   }

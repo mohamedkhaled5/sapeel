@@ -22,9 +22,12 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
 
   int startPage = 0;
   int currentDay = 1;
+  int effectiveDay = 1;
   int farBlockSize = 40;
   Map<String, bool> dailyStatus = {};
   bool weeklyBreakEnabled = false;
+  int? nearGoalPage;
+  bool nearGoalReached = false;
 
   @override
   void initState() {
@@ -72,6 +75,10 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
         farBlockSize = await AppStorage.getFarBlockSize();
         weeklyBreakEnabled = await AppStorage.getWeeklyBreakEnabled();
         dailyStatus = await AppStorage.getDailyStatus(currentDay);
+        final carry = await AppStorage.getCarryOverForDay(currentDay);
+        effectiveDay = carry ?? currentDay;
+        nearGoalPage = await AppStorage.getNearGoalPage();
+        nearGoalReached = await AppStorage.getNearGoalReached();
         if (mounted) setState(() {});
       } else {
         // إذا لم يتم العثور على صفحة بداية، فهذا يعني أن البرنامج لم يتم ضبطه بعد
@@ -97,6 +104,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     currentDay++;
     await AppStorage.saveDay(currentDay);
     dailyStatus = await AppStorage.getDailyStatus(currentDay);
+    final carry = await AppStorage.getCarryOverForDay(currentDay);
+    effectiveDay = carry ?? currentDay;
     setState(() {});
   }
 
@@ -106,6 +115,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
       currentDay--;
       await AppStorage.saveDay(currentDay);
       dailyStatus = await AppStorage.getDailyStatus(currentDay);
+      final carry = await AppStorage.getCarryOverForDay(currentDay);
+      effectiveDay = carry ?? currentDay;
       setState(() {});
     }
   }
@@ -120,7 +131,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     // محرك حساب خطة الحفظ والمراجعة
     final engine = MemorizationEngine(
       startPage: startPage,
-      dayNumber: currentDay,
+      dayNumber: effectiveDay,
       farBlockSize: farBlockSize,
       weeklyBreakEnabled: weeklyBreakEnabled,
     );
@@ -151,6 +162,12 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
               );
             },
           ),
+          // زر الهدف القريب
+          IconButton(
+            icon: const Icon(Icons.flag),
+            tooltip: "الهدف القريب",
+            onPressed: _showNearGoalDialog,
+          ),
           // زر فهرس الأيام
           IconButton(
             icon: const Icon(Icons.calendar_month),
@@ -166,6 +183,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                 await AppStorage.saveDay(currentDay);
                 // إعادة تحميل بيانات اليوم الجديد
                 dailyStatus = await AppStorage.getDailyStatus(currentDay);
+                final carry = await AppStorage.getCarryOverForDay(currentDay);
+                effectiveDay = carry ?? currentDay;
                 if (mounted) setState(() {});
               }
             },
@@ -244,6 +263,14 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                       "far_second_overflow",
                     ),
                 ],
+              ),
+            ),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _skipToday,
+                icon: const Icon(Icons.skip_next),
+                label: const Text("تخطي اليوم كاملًا"),
               ),
             ),
             // أزرار التنقل بين الأيام
@@ -334,8 +361,16 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     String statusKey, {
     String? customSubtitle,
   }) {
+    final theme = Theme.of(context);
+    final onSurface = theme.colorScheme.onSurface;
+    final onSurfaceVariant = theme.colorScheme.onSurfaceVariant;
+    final surfaceVariant = theme.colorScheme.surfaceVariant;
     final isDone = dailyStatus[statusKey] ?? false;
     final metadata = _quranRepo.getRangeMetadata(startP, endP);
+    final coversGoal =
+        nearGoalPage != null &&
+        nearGoalPage! >= startP &&
+        nearGoalPage! <= endP;
 
     return Card(
       elevation: isDone ? 0 : 2,
@@ -343,7 +378,10 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: isDone ? Colors.green.withOpacity(0.2) : Colors.transparent,
+          color: isDone
+              ? Colors.green.withOpacity(0.2)
+              : (coversGoal ? Colors.amber : Colors.transparent),
+          width: coversGoal && !isDone ? 1.5 : 1.0,
         ),
       ),
       color: isDone ? Colors.green.withOpacity(0.05) : null,
@@ -367,16 +405,49 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                         vertical: 2,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.brown.shade100,
+                        color: surfaceVariant,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         customSubtitle,
                         style: TextStyle(
                           fontSize: 10,
-                          color: Colors.brown.shade900,
+                          color: onSurfaceVariant,
                           fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ),
+                  ],
+                  if (coversGoal) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.amber.shade700),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.flag,
+                            size: 12,
+                            color: Colors.amber.shade800,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "هدف قريب",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -388,8 +459,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                   const SizedBox(height: 8),
                   Text(
                     "📖 ${metadata['surahRange']}",
-                    style: const TextStyle(
-                      color: Colors.black87,
+                    style: TextStyle(
+                      color: onSurface,
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -405,10 +476,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                       const SizedBox(width: 4),
                       Text(
                         metadata['pageRange'],
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 11, color: onSurfaceVariant),
                       ),
                       const SizedBox(width: 12),
                       const Icon(
@@ -419,10 +487,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                       const SizedBox(width: 4),
                       Text(
                         metadata['jozzRange'],
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 11, color: onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -448,7 +513,11 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                     Navigator.pushNamed(
                       context,
                       '/surah_detail',
-                      arguments: {'page': startP},
+                      arguments: {
+                        'page': startP,
+                        'endPage': endP,
+                        'segmentLabel': title,
+                      },
                     );
                   },
                   icon: const Icon(Icons.menu_book, size: 18),
@@ -526,6 +595,95 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
         ],
       ),
     );
+  }
+
+  // --- الهدف القريب ---
+  void _showNearGoalDialog() async {
+    final currentGoal = await AppStorage.getNearGoalPage();
+    final controller = TextEditingController(
+      text: currentGoal != null ? "$currentGoal" : "",
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text("تحديد هدف قريب"),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: "رقم الصفحة (1 - 604)",
+            hintText: "مثال: 100",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await AppStorage.saveNearGoalPage(null);
+              await AppStorage.saveNearGoalReached(false);
+              setState(() {
+                nearGoalPage = null;
+                nearGoalReached = false;
+              });
+              if (mounted) Navigator.pop(ctx);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("تم مسح الهدف القريب")),
+                );
+              }
+            },
+            child: const Text("مسح"),
+          ),
+          TextButton(
+            onPressed: () async {
+              final text = controller.text.trim();
+              final page = int.tryParse(text);
+              if (page != null && page >= 1 && page <= 604) {
+                await AppStorage.saveNearGoalPage(page);
+                await AppStorage.saveNearGoalReached(false);
+                setState(() {
+                  nearGoalPage = page;
+                  nearGoalReached = false;
+                });
+                if (mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("تم تعيين الهدف القريب: الصفحة $page"),
+                    ),
+                  );
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("الرجاء إدخال رقم صفحة صحيح")),
+                );
+              }
+            },
+            child: const Text("حفظ"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- تخطي اليوم ---
+  Future<void> _skipToday() async {
+    if (currentDay >= 604) return;
+    await AppStorage.setCarryOverForDay(currentDay + 1, effectiveDay);
+    currentDay += 1;
+    await AppStorage.saveDay(currentDay);
+    dailyStatus = await AppStorage.getDailyStatus(currentDay);
+    final carry = await AppStorage.getCarryOverForDay(currentDay);
+    effectiveDay = carry ?? currentDay;
+    if (mounted) {
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "تم تخطي اليوم. ستُعرض مهام يوم $effectiveDay في يوم $currentDay",
+          ),
+        ),
+      );
+    }
   }
 }
 

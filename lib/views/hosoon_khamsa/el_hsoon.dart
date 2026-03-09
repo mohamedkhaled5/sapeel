@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:sapeel/views/home/home_screen.dart';
-import 'package:sapeel/views/home/root_decider.dart';
 import 'package:sapeel/views/hosoon_khamsa/app_storage.dart';
 import 'package:sapeel/views/hosoon_khamsa/memorization_engine.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +27,23 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   bool weeklyBreakEnabled = false;
   int? nearGoalPage;
   bool nearGoalReached = false;
+  final List<String> _taskKeys = const [
+    'reading',
+    'listening',
+    'weekly',
+    'night',
+    'qabliy',
+    'new',
+    'near',
+    'far',
+    'far_overflow',
+    'far_second_overflow',
+  ];
+  Map<String, int?> _taskCarrySource = {};
+  Map<String, bool> _taskSkippedToNext = {};
+  bool _daySkipPendingUndo = false;
+  int? _daySkipPrevDay;
+  int? _daySkipPrevEffective;
 
   @override
   void initState() {
@@ -77,6 +93,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
         dailyStatus = await AppStorage.getDailyStatus(currentDay);
         final carry = await AppStorage.getCarryOverForDay(currentDay);
         effectiveDay = carry ?? currentDay;
+        await _loadTaskCarryoversForDay(currentDay);
+        await _loadTaskSkipFlagsForDay(currentDay);
         nearGoalPage = await AppStorage.getNearGoalPage();
         nearGoalReached = await AppStorage.getNearGoalReached();
         if (mounted) setState(() {});
@@ -106,6 +124,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     dailyStatus = await AppStorage.getDailyStatus(currentDay);
     final carry = await AppStorage.getCarryOverForDay(currentDay);
     effectiveDay = carry ?? currentDay;
+    await _loadTaskCarryoversForDay(currentDay);
+    await _loadTaskSkipFlagsForDay(currentDay);
     setState(() {});
   }
 
@@ -117,6 +137,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
       dailyStatus = await AppStorage.getDailyStatus(currentDay);
       final carry = await AppStorage.getCarryOverForDay(currentDay);
       effectiveDay = carry ?? currentDay;
+      await _loadTaskCarryoversForDay(currentDay);
+      await _loadTaskSkipFlagsForDay(currentDay);
       setState(() {});
     }
   }
@@ -127,14 +149,6 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     if (startPage == 0 || !_isRepoLoaded) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-
-    // محرك حساب خطة الحفظ والمراجعة
-    final engine = MemorizationEngine(
-      startPage: startPage,
-      dayNumber: effectiveDay,
-      farBlockSize: farBlockSize,
-      weeklyBreakEnabled: weeklyBreakEnabled,
-    );
 
     return Scaffold(
       appBar: AppBar(
@@ -185,6 +199,8 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                 dailyStatus = await AppStorage.getDailyStatus(currentDay);
                 final carry = await AppStorage.getCarryOverForDay(currentDay);
                 effectiveDay = carry ?? currentDay;
+                await _loadTaskCarryoversForDay(currentDay);
+                await _loadTaskSkipFlagsForDay(currentDay);
                 if (mounted) setState(() {});
               }
             },
@@ -204,73 +220,42 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
             Expanded(
               child: ListView(
                 children: [
-                  _buildReadingTile(engine),
-                  _buildListeningTile(engine),
-                  const Divider(height: 32),
-                  _buildEnhancedTile(
-                    "📅 التحضير الأسبوعي",
-                    engine.weeklyPrep['start']!,
-                    engine.weeklyPrep['end']!,
-                    "weekly",
+                  _buildReadingTileForDay(_getTaskSourceDayForToday('reading')),
+                  _buildListeningTileForDay(
+                    _getTaskSourceDayForToday('listening'),
                   ),
-                  if (engine.nightPrep != null)
-                    _buildEnhancedTile(
-                      "🌙 التحضير الليلي",
-                      engine.nightPrep!,
-                      engine.nightPrep!,
-                      "night",
-                    ),
-                  if (engine.qabliy != null)
-                    _buildEnhancedTile(
-                      "⏳ التحضير القبلي",
-                      engine.qabliy!,
-                      engine.qabliy!,
-                      "qabliy",
-                    ),
-                  if (engine.newPage != null)
-                    _buildEnhancedTile(
-                      "📝 الحفظ الجديد",
-                      engine.newPage!,
-                      engine.newPage!,
-                      "new",
-                    ),
-                  if (engine.nearReview != null)
-                    _buildEnhancedTile(
-                      "🔁 مراجعة القريب",
-                      engine.nearReview!['start']!,
-                      engine.nearReview!['end']!,
-                      "near",
-                    ),
-                  if (engine.farReview != null)
-                    _buildEnhancedTile(
-                      "📦 مراجعة البعيد (1)",
-                      engine.farReview!['start']!,
-                      engine.farReview!['end']!,
-                      "far",
-                    ),
-                  if (engine.farOverflowReview != null)
-                    _buildEnhancedTile(
-                      "📦 (الثاني) مراجعة البعيد",
-                      engine.farOverflowReview!['start']!,
-                      engine.farOverflowReview!['end']!,
-                      "far_overflow",
-                    ),
-                  if (engine.farSecondOverflowReview != null)
-                    _buildEnhancedTile(
-                      "📦 (الثالث) مراجعة البعيد",
-                      engine.farSecondOverflowReview!['start']!,
-                      engine.farSecondOverflowReview!['end']!,
-                      "far_second_overflow",
-                    ),
+                  const Divider(height: 32),
+                  ..._buildGenericTaskTiles(),
                 ],
               ),
             ),
             SizedBox(
               width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: _skipToday,
-                icon: const Icon(Icons.skip_next),
-                label: const Text("تخطي اليوم كاملًا"),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _skipToday,
+                      icon: const Icon(Icons.skip_next),
+                      label: const Text("تخطي اليوم كاملًا"),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  if (_daySkipPendingUndo)
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: _undoSkipToday,
+                        icon: const Icon(Icons.undo, color: Colors.red),
+                        label: const Text(
+                          "تراجع",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        style: TextButton.styleFrom(
+                          side: const BorderSide(color: Colors.red),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
             // أزرار التنقل بين الأيام
@@ -282,7 +267,13 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   }
 
   /// بناء عنصر قائمة خاص بمهمة القراءة (جزءين يومياً) مع زر الانتقال
-  Widget _buildReadingTile(MemorizationEngine engine) {
+  Widget _buildReadingTileForDay(int dayOverride) {
+    final engine = MemorizationEngine(
+      startPage: startPage,
+      dayNumber: dayOverride,
+      farBlockSize: farBlockSize,
+      weeklyBreakEnabled: weeklyBreakEnabled,
+    );
     final j1 = engine.readingJuz;
     final j2 = (j1 % 30) + 1;
 
@@ -309,22 +300,28 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   }
 
   /// بناء عنصر قائمة خاص بمهمة الاستماع (حزب يومياً) مع زر الانتقال
-  Widget _buildListeningTile(MemorizationEngine engine) {
+  Widget _buildListeningTileForDay(int dayOverride) {
+    final engine = MemorizationEngine(
+      startPage: startPage,
+      dayNumber: dayOverride,
+      farBlockSize: farBlockSize,
+      weeklyBreakEnabled: weeklyBreakEnabled,
+    );
     final h = engine.listeningHizb;
     final juzIndex = (h - 1) ~/ 2;
     final isSecondHizb = (h - 1) % 2 == 1;
 
-    final startP_juz = QuranMetadata.juzStartPages[juzIndex];
+    final startPJuz = QuranMetadata.juzStartPages[juzIndex];
     int startP;
 
     if (!isSecondHizb) {
-      startP = startP_juz;
+      startP = startPJuz;
     } else {
       // الحزب الثاني من الجزء
       final nextJuzStart = (juzIndex + 1 < 30)
           ? QuranMetadata.juzStartPages[juzIndex + 1]
           : 605;
-      startP = (startP_juz + nextJuzStart) ~/ 2;
+      startP = (startPJuz + nextJuzStart) ~/ 2;
     }
 
     // نهاية الحزب
@@ -333,7 +330,7 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
       final nextJuzStart = (juzIndex + 1 < 30)
           ? QuranMetadata.juzStartPages[juzIndex + 1]
           : 605;
-      endP = ((startP_juz + nextJuzStart) ~/ 2) - 1;
+      endP = ((startPJuz + nextJuzStart) ~/ 2) - 1;
     } else {
       final nextJuzStart = (juzIndex + 1 < 30)
           ? QuranMetadata.juzStartPages[juzIndex + 1]
@@ -353,6 +350,169 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     );
   }
 
+  List<Widget> _buildGenericTaskTiles() {
+    final widgets = <Widget>[];
+    // weekly
+    {
+      final dayOverride = _getTaskSourceDayForToday('weekly');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      widgets.add(
+        _buildEnhancedTile(
+          "📅 التحضير الأسبوعي",
+          eng.weeklyPrep['start']!,
+          eng.weeklyPrep['end']!,
+          "weekly",
+        ),
+      );
+    }
+    // night
+    {
+      final dayOverride = _getTaskSourceDayForToday('night');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.nightPrep != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "🌙 التحضير الليلي",
+            eng.nightPrep!,
+            eng.nightPrep!,
+            "night",
+          ),
+        );
+      }
+    }
+    // qabliy
+    {
+      final dayOverride = _getTaskSourceDayForToday('qabliy');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.qabliy != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "⏳ التحضير القبلي",
+            eng.qabliy!,
+            eng.qabliy!,
+            "qabliy",
+          ),
+        );
+      }
+    }
+    // new
+    {
+      final dayOverride = _getTaskSourceDayForToday('new');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.newPage != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "📝 الحفظ الجديد",
+            eng.newPage!,
+            eng.newPage!,
+            "new",
+          ),
+        );
+      }
+    }
+    // near
+    {
+      final dayOverride = _getTaskSourceDayForToday('near');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.nearReview != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "🔁 مراجعة القريب",
+            eng.nearReview!['start']!,
+            eng.nearReview!['end']!,
+            "near",
+          ),
+        );
+      }
+    }
+    // far
+    {
+      final dayOverride = _getTaskSourceDayForToday('far');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.farReview != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "📦 مراجعة البعيد (1)",
+            eng.farReview!['start']!,
+            eng.farReview!['end']!,
+            "far",
+          ),
+        );
+      }
+    }
+    // far_overflow
+    {
+      final dayOverride = _getTaskSourceDayForToday('far_overflow');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.farOverflowReview != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "📦 (الثاني) مراجعة البعيد",
+            eng.farOverflowReview!['start']!,
+            eng.farOverflowReview!['end']!,
+            "far_overflow",
+          ),
+        );
+      }
+    }
+    // far_second_overflow
+    {
+      final dayOverride = _getTaskSourceDayForToday('far_second_overflow');
+      final eng = MemorizationEngine(
+        startPage: startPage,
+        dayNumber: dayOverride,
+        farBlockSize: farBlockSize,
+        weeklyBreakEnabled: weeklyBreakEnabled,
+      );
+      if (eng.farSecondOverflowReview != null) {
+        widgets.add(
+          _buildEnhancedTile(
+            "📦 (الثالث) مراجعة البعيد",
+            eng.farSecondOverflowReview!['start']!,
+            eng.farSecondOverflowReview!['end']!,
+            "far_second_overflow",
+          ),
+        );
+      }
+    }
+    return widgets;
+  }
+
   /// بناء عنصر قائمة محسّن ببيانات السور والآيات وزر الانتقال
   Widget _buildEnhancedTile(
     String title,
@@ -366,11 +526,13 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
     final onSurfaceVariant = theme.colorScheme.onSurfaceVariant;
     final surfaceVariant = theme.colorScheme.surfaceVariant;
     final isDone = dailyStatus[statusKey] ?? false;
+    final isSkipped = _taskSkippedToNext[statusKey] ?? false;
     final metadata = _quranRepo.getRangeMetadata(startP, endP);
     final coversGoal =
         nearGoalPage != null &&
         nearGoalPage! >= startP &&
         nearGoalPage! <= endP;
+    final carriedFromDay = _taskCarrySource[statusKey];
 
     return Card(
       elevation: isDone ? 0 : 2,
@@ -395,8 +557,46 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isSkipped ? Colors.red : null,
+                      decoration: isSkipped ? TextDecoration.lineThrough : null,
+                      decorationColor: Colors.red,
+                    ),
                   ),
+                  if (carriedFromDay != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blueGrey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blueGrey.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.redo,
+                            size: 12,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            "مرحّل من يوم $carriedFromDay",
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: onSurfaceVariant,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   if (customSubtitle != null) ...[
                     const SizedBox(width: 8),
                     Container(
@@ -530,6 +730,40 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: SizedBox(
+                width: double.infinity,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: currentDay >= 604 || isSkipped
+                            ? null
+                            : () => _skipTask(statusKey),
+                        icon: const Icon(Icons.skip_next),
+                        label: const Text("تخطي هذا الجزء لليوم التالي"),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    if (isSkipped)
+                      Expanded(
+                        child: TextButton.icon(
+                          onPressed: () => _undoSkipTask(statusKey),
+                          icon: const Icon(Icons.undo, color: Colors.red),
+                          label: const Text(
+                            "تراجع",
+                            style: TextStyle(color: Colors.red),
+                          ),
+                          style: TextButton.styleFrom(
+                            side: const BorderSide(color: Colors.red),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -668,22 +902,75 @@ class _QuranFollowUpFlowState extends State<QuranFollowUpFlow> {
   // --- تخطي اليوم ---
   Future<void> _skipToday() async {
     if (currentDay >= 604) return;
-    await AppStorage.setCarryOverForDay(currentDay + 1, effectiveDay);
-    currentDay += 1;
+    _daySkipPrevDay = currentDay;
+    _daySkipPrevEffective = effectiveDay;
+    await AppStorage.setCarryOverForDay(
+      _daySkipPrevDay! + 1,
+      _daySkipPrevEffective!,
+    );
+    currentDay = _daySkipPrevDay! + 1;
     await AppStorage.saveDay(currentDay);
     dailyStatus = await AppStorage.getDailyStatus(currentDay);
     final carry = await AppStorage.getCarryOverForDay(currentDay);
     effectiveDay = carry ?? currentDay;
-    if (mounted) {
-      setState(() {});
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "تم تخطي اليوم. ستُعرض مهام يوم $effectiveDay في يوم $currentDay",
-          ),
-        ),
-      );
+    await _loadTaskCarryoversForDay(currentDay);
+    await _loadTaskSkipFlagsForDay(currentDay);
+    _daySkipPendingUndo = true;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _skipTask(String statusKey) async {
+    if (currentDay >= 604) return;
+    final sourceDay = _getTaskSourceDayForToday(statusKey);
+    final targetDay = currentDay + 1;
+    await AppStorage.setCarryOverForTask(targetDay, statusKey, sourceDay);
+    _taskSkippedToNext[statusKey] = true;
+    if (!mounted) return;
+    setState(() {});
+  }
+
+  Future<void> _undoSkipTask(String statusKey) async {
+    final targetDay = currentDay + 1;
+    await AppStorage.clearCarryOverForTask(targetDay, statusKey);
+    _taskSkippedToNext[statusKey] = false;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _undoSkipToday() async {
+    if (_daySkipPrevDay == null) return;
+    await AppStorage.clearCarryOverForDay(_daySkipPrevDay! + 1);
+    currentDay = _daySkipPrevDay!;
+    await AppStorage.saveDay(currentDay);
+    dailyStatus = await AppStorage.getDailyStatus(currentDay);
+    final carryBack = await AppStorage.getCarryOverForDay(currentDay);
+    effectiveDay = carryBack ?? currentDay;
+    await _loadTaskCarryoversForDay(currentDay);
+    await _loadTaskSkipFlagsForDay(currentDay);
+    _daySkipPendingUndo = false;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _loadTaskCarryoversForDay(int day) async {
+    final map = <String, int?>{};
+    for (final key in _taskKeys) {
+      map[key] = await AppStorage.getCarryOverForTask(day, key);
     }
+    _taskCarrySource = map;
+  }
+
+  Future<void> _loadTaskSkipFlagsForDay(int day) async {
+    final map = <String, bool>{};
+    final targetDay = day + 1;
+    for (final key in _taskKeys) {
+      final src = await AppStorage.getCarryOverForTask(targetDay, key);
+      map[key] = src != null;
+    }
+    _taskSkippedToNext = map;
+  }
+
+  int _getTaskSourceDayForToday(String key) {
+    return _taskCarrySource[key] ?? effectiveDay;
   }
 }
 

@@ -160,6 +160,26 @@ class AppStorage {
     await box.delete("carryover_$day");
   }
 
+  // --- تخطي مهمة معينة (Carryover per Task) ---
+  static Future setCarryOverForTask(
+    int targetDay,
+    String taskKey,
+    int sourceDay,
+  ) async {
+    final box = await _getBox();
+    await box.put("carryover_task_${taskKey}_$targetDay", sourceDay);
+  }
+
+  static Future<int?> getCarryOverForTask(int day, String taskKey) async {
+    final box = await _getBox();
+    return box.get("carryover_task_${taskKey}_$day");
+  }
+
+  static Future clearCarryOverForTask(int day, String taskKey) async {
+    final box = await _getBox();
+    await box.delete("carryover_task_${taskKey}_$day");
+  }
+
   // --- الإحصائيات (Statistics) ---
 
   /// زيادة عداد الإكمال لفئة معينة
